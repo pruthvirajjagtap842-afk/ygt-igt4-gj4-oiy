@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "campro_sessions": {
+      "$sessionId": {
+        ".read":  true,
+        ".write": true,
+        "trustScore": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        }
+      }
+    }
+  }
+}

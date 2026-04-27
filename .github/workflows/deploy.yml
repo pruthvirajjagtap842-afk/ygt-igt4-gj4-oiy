@@ -1,0 +1,60 @@
+name: Deploy campro to Railway
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ── Lint & basic validation ─────────────────────────────────
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check server starts (smoke test)
+        run: |
+          timeout 8s node -e "
+            process.env.PORT = 4099;
+            // Run without real Firebase/Agora credentials — should start anyway
+            require('./server.js');
+          " || code=\$?
+          # Exit code 124 = timeout (server was still running) = pass
+          # Exit code 0   = server exited cleanly
+          # Anything else = real error
+          if [ \"\${code}\" != \"124\" ] && [ \"\${code}\" != \"0\" ] && [ \"\${code}\" != \"\" ]; then
+            echo \"Server crashed with exit code \${code}\"
+            exit 1
+          fi
+          echo "✅ Server smoke test passed"
+
+  # ── Deploy to Railway on merge to main ─────────────────────
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --detach
+
+      - name: Deployment summary
+        run: |
+          echo "🚀 campro deployed to Railway successfully"
+          echo "   Check your Railway dashboard for the live URL"

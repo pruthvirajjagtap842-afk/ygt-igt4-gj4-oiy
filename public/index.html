@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+  <!-- Firebase Realtime Database (compat CDN — easiest for single-file apps) -->
+ <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> campro </title>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080c14; --surface:#0d1320; --surface2:#111827;
+  --border:#1e2d42; --accent:#00d4ff; --danger:#ef4444;
+  --success:#10b981; --warn:#f59e0b; --text:#e2e8f0; --muted:#64748b;
+  --mono:'Space Mono',monospace; --body:'DM Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow:hidden;}
+body {
+  overflow-y: auto !important;
+}
+
+/* ── LOBBY ── */
+
+#lobby{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+.glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.07) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:44px;width:460px;position:relative;z-index:1;box-shadow:0 0 80px rgba(0,212,255,.06),0 24px 60px rgba(0,0,0,.5);}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.brand-icon{width:38px;height:38px;background:linear-gradient(135deg,#00d4ff,#0080ff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.brand-name{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);}
+.brand-name span{color:var(--text);}
+.tagline{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:32px;letter-spacing:.5px;}
+.lbl{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;font-family:var(--mono);}
+.inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px 14px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s;margin-bottom:16px;}
+.inp:focus{border-color:var(--accent);}
+.role-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:20px;}
+.role-opt{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:13px 10px;color:var(--muted);cursor:pointer;text-align:center;font-size:13px;font-weight:500;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.role-opt .ri{font-size:20px;}
+.role-opt.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.05);}
+.join-btn{width:100%;background:linear-gradient(135deg,#00d4ff,#0080ff);border:none;border-radius:9px;padding:13px;color:#000;font-weight:700;font-size:15px;cursor:pointer;font-family:var(--body);letter-spacing:.2px;transition:opacity .2s,transform .1s;}
+.join-btn:hover{opacity:.9;transform:translateY(-1px);}
+.feat-row{display:flex;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
+.feat{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 6px;text-align:center;font-size:10px;color:var(--muted);font-family:var(--mono);}
+.feat .fi{font-size:15px;display:block;margin-bottom:3px;}
+
+/* ── APP ── */
+#app{display:none;height:100vh;flex-direction:column;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tl{display:flex;align-items:center;gap:14px;}
+.tl-logo{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--accent);}
+.mid-tag{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 10px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:20px;padding:3px 10px;font-size:11px;font-family:var(--mono);color:var(--danger);}
+.ldot{width:6px;height:6px;background:var(--danger);border-radius:50%;animation:blink 1.2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.tr{display:flex;align-items:center;gap:10px;}
+.timer{font-family:var(--mono);font-size:13px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 10px;}
+.end-btn{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:var(--danger);border-radius:7px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--body);}
+.end-btn:hover{background:rgba(239,68,68,.25);}
+
+/* layout */
+.layout{display:grid;grid-template-columns:1fr 330px;flex:1;overflow:hidden;}
+
+/* video side */
+.video-side{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.vid-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;flex:1;}
+.vtile{background:var(--surface);border:1px solid var(--border);border-radius:13px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
+.vtile video{width:100%;height:100%;object-fit:cover;display:block;}
+.vtile-overlay{position:absolute;inset:0;pointer-events:none;}
+.vtile-overlay canvas{width:100%;height:100%;position:absolute;inset:0;}
+.tile-name{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:3px 9px;font-size:11px;font-family:var(--mono);backdrop-filter:blur(4px);}
+.trust-chip{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);border-radius:8px;padding:6px 9px;text-align:center;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1);}
+.trust-chip-val{font-family:var(--mono);font-size:18px;font-weight:700;line-height:1;}
+.trust-chip-lbl{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.alert-border{position:absolute;inset:0;border-radius:13px;border:2px solid transparent;pointer-events:none;transition:border-color .1s;}
+.alert-border.flash{animation:flashborder .6s ease;}
+@keyframes flashborder{0%{border-color:transparent}30%{border-color:var(--danger)}100%{border-color:transparent}}
+
+/* camera error / placeholder */
+.cam-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;width:100%;height:100%;}
+.cam-msg .ci{font-size:32px;opacity:.6;}
+.cam-msg .cstatus{font-size:10px;color:var(--accent);margin-top:4px;}
+
+/* status strip */
+.status-strip{display:flex;align-items:center;gap:16px;padding:8px 14px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+.sitem{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);}
+.sdot{width:7px;height:7px;border-radius:50%;}
+.sdot.g{background:var(--success);box-shadow:0 0 5px var(--success);}
+.sdot.r{background:var(--danger);box-shadow:0 0 5px var(--danger);}
+.sdot.y{background:var(--warn);box-shadow:0 0 5px var(--warn);}
+.sdot.b{background:var(--accent);box-shadow:0 0 5px var(--accent);}
+
+/* controls */
+.controls{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+.cbtn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--body);font-weight:500;transition:all .15s;}
+.cbtn:hover{border-color:var(--accent);color:var(--accent);}
+.cbtn.danger:hover{border-color:var(--danger);color:var(--danger);}
+.cbtn.sim{border-color:rgba(245,158,11,.4);color:var(--warn);}
+.cbtn.sim:hover{background:rgba(245,158,11,.08);}
+
+/* sidebar */
+.sidebar{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stab{flex:1;padding:12px 6px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;background:none;border:none;color:var(--muted);font-family:var(--mono);border-bottom:2px solid transparent;transition:all .2s;}
+.stab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.scont{display:none;flex:1;overflow-y:auto;flex-direction:column;padding:14px;gap:12px;}
+.scont.on{display:flex;}
+.stitle{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;}
+
+/* trust card */
+.trust-card{background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:18px;text-align:center;}
+.trust-big{font-family:var(--mono);font-size:54px;font-weight:700;line-height:1;transition:color .4s;}
+.trust-sub{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+.tbar-wrap{background:rgba(255,255,255,.06);border-radius:4px;height:5px;margin-top:12px;overflow:hidden;}
+.tbar-fill{height:100%;border-radius:4px;transition:width .5s ease,background .5s ease;}
+
+/* detect grid */
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.dcard{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px 9px;text-align:center;transition:border-color .3s,background .3s;}
+.dcard.hit{border-color:var(--danger);background:rgba(239,68,68,.06);animation:shake .3s ease;}
+@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.dicon{font-size:20px;display:block;margin-bottom:4px;}
+.dname{font-size:9px;color:var(--muted);font-family:var(--mono);display:block;}
+.dcount{font-size:18px;font-weight:700;font-family:var(--mono);display:block;margin-top:2px;}
+.dstatus{font-size:10px;font-family:var(--mono);font-weight:700;margin-top:2px;display:block;}
+.dstatus.ok{color:var(--success);}
+.dstatus.bad{color:var(--danger);}
+.dstatus.mid{color:var(--warn);}
+
+/* gaze map */
+.gaze-box{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:10px;}
+#gazeCanvas{width:100%;aspect-ratio:16/9;display:block;border-radius:6px;}
+
+/* alerts */
+.no-alts{text-align:center;padding:36px 16px;color:var(--muted);font-family:var(--mono);font-size:11px;}
+.aitem{background:var(--bg);border:1px solid var(--border);border-left:3px solid;border-radius:7px;padding:9px 11px;animation:slideIn .25s ease;flex-shrink:0;margin-bottom:8px;}
+@keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.aitem.high{border-left-color:var(--danger);}
+.aitem.medium{border-left-color:var(--warn);}
+.aitem.low{border-left-color:var(--accent);}
+.ahead{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.atitle{font-size:11px;font-weight:700;font-family:var(--mono);}
+.atime{font-size:9px;color:var(--muted);font-family:var(--mono);}
+.adesc{font-size:11px;color:var(--muted);line-height:1.4;}
+.asev{font-size:9px;font-family:var(--mono);font-weight:700;padding:1px 5px;border-radius:3px;margin-right:5px;}
+.asev.high{background:rgba(239,68,68,.2);color:var(--danger);}
+.asev.medium{background:rgba(245,158,11,.2);color:var(--warn);}
+.asev.low{background:rgba(0,212,255,.2);color:var(--accent);}
+
+/* report */
+.rcard{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px;}
+.rrow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.rrow:last-child{border-bottom:none;}
+.rlbl{color:var(--muted);font-family:var(--mono);font-size:11px;}
+.rval{font-family:var(--mono);font-weight:700;}
+.exp-btn{width:100%;background:linear-gradient(135deg,#00d4ff,#0080ff);border:none;border-radius:9px;padding:11px;color:#000;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--body);transition:opacity .2s;}
+.exp-btn:hover{opacity:.85;}
+
+/* modal */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:100;align-items:center;justify-content:center;}
+#modal.on{display:flex;}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:36px;width:480px;box-shadow:0 0 60px rgba(0,0,0,.5);}
+.mtitle{font-family:var(--mono);font-size:18px;font-weight:700;margin-bottom:4px;}
+.msub{color:var(--muted);font-size:13px;margin-bottom:24px;}
+.vbox{border-radius:11px;padding:18px;text-align:center;margin-bottom:20px;}
+.vbox.clean{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);}
+.vbox.suspect{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);}
+.vbox.fraud{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);}
+.vicon{font-size:36px;display:block;margin-bottom:6px;}
+.vtext{font-family:var(--mono);font-size:16px;font-weight:700;}
+.mstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:20px;}
+.mstat{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:11px;text-align:center;}
+.mstat-v{font-family:var(--mono);font-size:20px;font-weight:700;}
+.mstat-l{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:3px;}
+.mbtns{display:flex;gap:9px;}
+.mbtn{flex:1;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);border:none;transition:opacity .2s;}
+.mbtn.primary{background:linear-gradient(135deg,#00d4ff,#0080ff);color:#000;}
+.mbtn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.mbtn:hover{opacity:.85;}
+
+/* loader overlay */
+#loader{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+.loader-logo{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent);}
+.loader-bar-wrap{width:260px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
+.loader-bar{height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#0080ff);border-radius:4px;transition:width .4s ease;}
+.loader-msg{font-family:var(--mono);font-size:12px;color:var(--muted);}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+/* ── STRICT MODE ── */
+.strict-btn{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:var(--danger);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--mono);letter-spacing:.5px;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.strict-btn:hover{background:rgba(239,68,68,.22);border-color:var(--danger);box-shadow:0 0 10px rgba(239,68,68,.3);}
+.strict-btn.active{background:rgba(239,68,68,.2);border-color:var(--danger);color:#fff;box-shadow:0 0 14px rgba(239,68,68,.4);animation:strictPulse 2s infinite;}
+@keyframes strictPulse{0%,100%{box-shadow:0 0 10px rgba(239,68,68,.3)}50%{box-shadow:0 0 20px rgba(239,68,68,.6)}}
+
+.exam-badge{display:none;align-items:center;gap:6px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);border-radius:20px;padding:3px 12px;font-size:11px;font-family:var(--mono);font-weight:700;color:var(--danger);}
+.exam-badge.on{display:flex;}
+.elock-dot{width:7px;height:7px;background:var(--danger);border-radius:50%;animation:blink 1s infinite;}
+
+#strictOverlay{display:none;position:fixed;inset:0;z-index:9998;pointer-events:none;}
+#strictOverlay.on{display:block;}
+#strictOverlay::before{content:'';position:absolute;inset:0;border:3px solid var(--danger);pointer-events:none;animation:borderFlash 1s ease forwards;}
+@keyframes borderFlash{0%{opacity:1}100%{opacity:0}}
+
+#violationToast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,.95);color:#fff;border:1px solid var(--danger);border-radius:10px;padding:12px 24px;font-family:var(--mono);font-size:13px;font-weight:700;z-index:9999;display:none;text-align:center;box-shadow:0 4px 24px rgba(239,68,68,.5);}
+#violationToast.show{display:block;animation:toastIn .25s ease;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+#fsWarnBanner{display:none;position:fixed;top:0;left:0;right:0;background:var(--danger);color:#fff;text-align:center;padding:10px;font-family:var(--mono);font-size:12px;font-weight:700;z-index:10000;letter-spacing:.5px;}
+#fsWarnBanner.on{display:block;}
+</style>
+</head>
+<body style="overflow-y: auto;">
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">🛡️ campro <progress></progress></div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loaderBar"></div></div>
+  <div class="loader-msg" id="loaderMsg">Initializing…</div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" style="display:none;">
+  <div class="grid-bg"></div>
+  <div class="glow"></div>
+  <div class="card">
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-name">campro <span></span></div>
+    </div>
+    <p class="tagline">// AI-Powered Interview Integrity Platform</p>
+    <label class="lbl">Your Name</label>
+    <input class="inp" id="nameInp" placeholder="e.g. Rahul Sharma"/>
+    <label class="lbl">Meeting ID</label>
+    <input class="inp" id="midInp" value="INTGR-2024-X7K"/>
+    <label class="lbl">Join As</label>
+    <div class="role-row">
+      <div class="role-opt active" id="rI" onclick="setRole('interviewer')"><span class="ri">🎯</span>Interviewer</div>
+      <div class="role-opt" id="rC" onclick="setRole('candidate')"><span class="ri">👤</span>Candidate</div>
+    </div>
+    <button class="join-btn" onclick="join()">🚀 &nbsp;Join Interview</button>
+    <div class="feat-row">
+      <div class="feat"><span class="fi">👁️</span>Gaze AI</div>
+      <div class="feat"><span class="fi">👥</span>Multi-Face</div>
+      <div class="feat"><span class="fi">📱</span>Device Detect</div>
+      <div class="feat"><span class="fi">📊</span>Reports</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="tl">
+      <div class="tl-logo">🛡️ campro</div>
+      <div class="mid-tag" id="midDisplay">—</div>
+      <div class="live-badge"><div class="ldot"></div>LIVE</div>
+    </div>
+    <!-- REPLACE WITH THIS: -->
+<div class="tr">
+  <div class="exam-badge" id="examBadge"><div class="elock-dot"></div>EXAM LOCK</div>
+  <!-- REAL-TIME SYNC BADGE (shown to interviewer) -->
+  <div id="syncBadge" style="display:none;align-items:center;border-radius:20px;padding:3px 11px;font-size:11px;font-family:var(--mono);font-weight:700;gap:5px;transition:all .3s;"></div>
+  <div class="timer" id="timerEl">00:00</div>
+  <button class="strict-btn" id="strictBtn" onclick="toggleStrictMode()">🔒 Strict Mode</button>
+  <button class="end-btn" onclick="endInterview()">⏹ End</button>
+</div>
+</div>
+
+<!-- ADD THESE 3 LINES right after the closing </div> of the topbar: -->
+<div id="strictOverlay"></div>
+<div id="violationToast"></div>
+<div id="fsWarnBanner">⚠️ FULLSCREEN REQUIRED — Return to fullscreen immediately or this will be flagged &nbsp;<button onclick="reenterFullscreen()" style="margin-left:12px;background:#fff;color:#ef4444;border:none;border-radius:5px;padding:3px 10px;font-weight:700;cursor:pointer;font-family:monospace;font-size:11px;">↩ Restore Fullscreen</button></div>
+
+  <!-- layout -->
+  <div class="layout" style="flex:1;overflow:hidden;">
+
+    <!-- left: video + strip + controls -->
+    <div class="video-side">
+      <div class="vid-grid">
+
+        <!-- candidate tile -->
+        <div class="vtile" id="canTile">
+          <video id="canVideo" autoplay muted playsinline style="display:none;"></video>
+          <div class="vtile-overlay">
+            <canvas id="faceCanvas"></canvas>
+          </div>
+          <div class="cam-msg" id="camMsg">
+            <div class="ci" id="camIcon">📷</div>
+            <div id="camText">Requesting camera…</div>
+            <div class="cstatus" id="camStatus">Please allow camera access</div>
+          </div>
+          <div class="alert-border" id="alertBorder"></div>
+          <div class="tile-name" id="canName">Candidate</div>
+          <div class="trust-chip">
+            <div class="trust-chip-val" id="chipScore" style="color:var(--success);">100</div>
+            <div class="trust-chip-lbl">TRUST</div>
+          </div>
+        </div>
+
+        <!-- interviewer tile -->
+        <div class="vtile" id="ivTile">
+          <video id="ivVideo" autoplay playsinline style="display:none;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;"></video>
+          <div class="cam-msg" id="ivCamMsg">
+            <div class="ci">🎯</div>
+            <div id="ivName">Interviewer</div>
+            <div class="cstatus" id="ivStatus">Waiting to connect…</div>
+          </div>
+          <div class="tile-name" id="ivNameTag">Interviewer</div>
+        </div>
+
+      </div>
+
+      <!-- status strip -->
+      <div class="status-strip">
+        <div class="sitem"><div class="sdot b" id="fsdot"></div><span id="fstext">Initialising…</span></div>
+        <div class="sitem"><div class="sdot g" id="gsdot"></div><span id="gstext">Gaze: —</span></div>
+        <div class="sitem" id="mfitem" style="display:none;"><div class="sdot r"></div><span>Multiple faces!</span></div>
+        <div class="sitem" style="margin-left:auto;"><div class="sdot g"></div><span>Recording</span></div>
+      </div>
+
+      <!-- controls -->
+      <div class="controls">
+        <button class="cbtn" id="micBtn" onclick="toggleMic()">🎤 Mute</button>
+        <button class="cbtn" id="camBtn" onclick="toggleCam()">📹 Stop Video</button>
+        <button class="cbtn sim" onclick="sim('gaze')">🧪 Sim: Eye Drift</button>
+        
+        <button class="cbtn danger" onclick="endInterview()">⏹ End</button>
+      </div>
+    </div>
+
+    <!-- sidebar -->
+    <div class="sidebar">
+      <div class="stabs">
+        <button class="stab on" onclick="stab('analysis',this)">ANALYSIS</button>
+        <button class="stab" onclick="stab('alerts',this)">ALERTS <span id="abadge" style="background:var(--danger);border-radius:8px;padding:0 4px;font-size:9px;display:none;"></span></button>
+        <button class="stab" onclick="stab('report',this)">REPORT</button>
+      </div>
+
+      <!-- analysis -->
+      <div class="scont on" id="sc-analysis">
+        <div>
+          <div class="stitle">Trust Score</div>
+          <div class="trust-card">
+            <div class="trust-big" id="trustBig" style="color:var(--success);">100</div>
+            <div class="trust-sub">rity Index</div>
+            <div class="tbar-wrap"><div class="tbar-fill" id="tbarFill" style="width:100%;background:var(--success);"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="stitle">AI Assistance Probability</div>
+          <div class="trust-card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">🤖</span>
+              <div>
+                <div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;">AI-Generated Response</div>
+                <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;">Based on speech patterns</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="trust-big" id="aiProb" style="font-size:32px;color:var(--success);">0%</div>
+              <div class="trust-chip-lbl">PROBABILITY</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="stitle">Detection Matrix</div>
+          <div class="dgrid">
+            <div class="dcard" id="dc-gaze"><span class="dicon">👁️</span><span class="dname">Gaze Drift</span><span class="dcount" id="dn-gaze">0</span><span class="dstatus ok" id="ds-gaze">NORMAL</span></div>
+            <div class="dcard" id="dc-multi"><span class="dicon">👥</span><span class="dname">Multi-Face</span><span class="dcount" id="dn-multi">0</span><span class="dstatus ok" id="ds-multi">CLEAR</span></div>
+            <div class="dcard" id="dc-phone"><span class="dicon">📱</span><span class="dname">Device</span><span class="dcount" id="dn-phone">0</span><span class="dstatus ok" id="ds-phone">CLEAR</span></div>
+            <div class="dcard" id="dc-noface"><span class="dicon">🚫</span><span class="dname">Face Absent</span><span class="dcount" id="dn-noface">0</span><span class="dstatus ok" id="ds-noface">PRESENT</span></div>
+            <div class="dcard" id="dc-voice"><span class="dicon">🎙️</span><span class="dname">Multi-Voice</span><span class="dcount" id="dn-voice">0</span><span class="dstatus ok" id="ds-voice">CLEAR</span></div>
+            <div class="dcard" id="dc-tab"><span class="dicon">🖥️</span><span class="dname">Tab Switch</span><span class="dcount" id="dn-tab">0</span><span class="dstatus ok" id="ds-tab">FOCUSED</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="stitle">Gaze Heatmap</div>
+          <div class="gaze-box">
+            <canvas id="gazeCanvas" width="280" height="157"></canvas>
+            <div style="font-size:9px;color:var(--muted);font-family:var(--mono);text-align:center;margin-top:6px;">🟢 on-screen &nbsp;🔴 off-screen</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- alerts -->
+      <div class="scont" id="sc-alerts">
+        <div class="no-alts" id="noAlts"><div style="font-size:28px;margin-bottom:10px;">✅</div>No alerts yet.<br>Monitoring in progress…</div>
+      </div>
+
+      <!-- report -->
+      <div class="scont" id="sc-report">
+        <div>
+          <div class="stitle">Session Summary</div>
+          <div class="rcard">
+            <div class="rrow"><span class="rlbl">Duration</span><span class="rval" id="r-dur">00:00</span></div>
+            <div class="rrow"><span class="rlbl">Trust Score</span><span class="rval" id="r-trust">100%</span></div>
+            <div class="rrow"><span class="rlbl">AI Assist Prob.</span><span class="rval" id="aiProbReport" style="color:var(--success);">0%</span></div>
+            <div class="rrow"><span class="rlbl">Total Alerts</span><span class="rval" id="r-alts">0</span></div>
+            <div class="rrow"><span class="rlbl">High Severity</span><span class="rval" id="r-high" style="color:var(--danger);">0</span></div>
+            <div class="rrow"><span class="rlbl">Gaze Events</span><span class="rval" id="r-gaze">0</span></div>
+            <div class="rrow"><span class="rlbl">Multi-Face</span><span class="rval" id="r-multi">0</span></div>
+            <div class="rrow"><span class="rlbl">Device Detected</span><span class="rval" id="r-phone">0</span></div>
+            <div class="rrow"><span class="rlbl">Tab Switches</span><span class="rval" id="r-tab">0</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="stitle">Verdict</div>
+          <div class="rcard" style="text-align:center;padding:16px;" id="verdCard">
+            <div style="font-size:28px;margin-bottom:6px;" id="verdIcon">⏳</div>
+            <div style="font-family:var(--mono);font-weight:700;font-size:13px;" id="verdText">Session in progress</div>
+          </div>
+        </div>
+        <button class="exp-btn" onclick="exportReport()">📄 Export Report</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div class="mcard">
+    <div class="mtitle">📋 Interview Complete</div>
+    <div class="msub">Integrity analysis summary</div>
+    <div class="vbox" id="mvbox">
+      <span class="vicon" id="mvicon">✅</span>
+      <div class="vtext" id="mvtext">CLEAN</div>
+    </div>
+    <div class="mstats">
+      <div class="mstat"><div class="mstat-v" id="ms-trust">100</div><div class="mstat-l">Trust Score</div></div>
+      <div class="mstat"><div class="mstat-v" id="ms-alts">0</div><div class="mstat-l">Alerts</div></div>
+      <div class="mstat"><div class="mstat-v" id="ms-dur">00:00</div><div class="mstat-l">Duration</div></div>
+    </div>
+    <div class="mbtns">
+      <button class="mbtn primary" onclick="exportReport()">📄 Export</button>
+      <button class="mbtn secondary" onclick="location.reload()">🔙 New Session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ────────────────────────────────────────────────
+   FIREBASE CONFIG
+   ▸ Replace with YOUR Firebase project values.
+   ▸ Steps:
+     1. Go to https://console.firebase.google.com
+     2. Create a project → Add web app → copy config
+     3. In Realtime Database → Rules → set:
+        { "rules": { ".read": true, ".write": true } }
+        (tighten rules before production!)
+──────────────────────────────────────────────── */
+ // ── Config is fetched from the backend at runtime (no hardcoded secrets) ──
+let FIREBASE_CONFIG = null;
+let AGORA_APP_ID    = null;
+
+async function fetchBackendConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    FIREBASE_CONFIG = cfg.firebase;
+    AGORA_APP_ID    = cfg.agoraAppId;
+    console.log('[campro] Config loaded from backend ✅');
+  } catch (e) {
+    console.error('[campro] Failed to fetch backend config:', e);
+  }
+}
+
+let firebaseApp = null;
+let db = null;
+let sessionRef = null;
+
+function initFirebase(roomId) {
+  try {
+    // Reuse existing Firebase app if already initialized (prevents "already exists" error)
+    firebaseApp = firebase.apps && firebase.apps.length
+      ? firebase.app()
+      : firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    sessionRef = db.ref('campro_sessions/' + roomId.replace(/[^a-zA-Z0-9_-]/g, '_'));
+
+    // ── Interviewer: listen for candidate gaze from Firebase ──
+    if (role === 'interviewer') {
+      sessionRef.child('gaze').on('value', snap => {
+        const g = snap.val();
+        if (!g || typeof g.x !== 'number') return;
+        gazePoints.push({ x: g.x, y: g.y, away: g.away, t: g.t || Date.now() });
+        if (gazePoints.length > 200) gazePoints.shift();
+        drawGazeCanvas();
+      });
+    }
+
+    // ── Candidate: listen for strict mode changes from interviewer ──
+    if (role === 'candidate') {
+      sessionRef.child('strictMode').on('value', snap => {
+        const val = snap.val();
+        console.log('[campro] strictMode Firebase value:', val, 'active:', strictModeActive);
+        if (val === true && !strictModeActive) {
+          enableStrictMode();
+        }
+        if (val === false && strictModeActive) {
+          disableStrictMode();
+        }
+      });
+      console.log('[campro] Candidate strictMode listener attached for room:', roomId);
+    }
+
+    setSyncStatus('connecting');
+    db.ref('.info/connected').on('value', snap => {
+      setSyncStatus(snap.val() ? 'live' : 'offline');
+    });
+  } catch (e) {
+    console.warn('[campro] Firebase init failed:', e);
+    setSyncStatus('offline');
+  }
+}
+
+function setSyncStatus(state) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  const states = {
+    live:        { text: '🔗 SYNC LIVE',    bg: 'rgba(16,185,129,.15)', border: 'rgba(16,185,129,.5)', color: '#10b981' },
+    connecting:  { text: '⏳ CONNECTING…',  bg: 'rgba(245,158,11,.1)',  border: 'rgba(245,158,11,.4)', color: '#f59e0b' },
+    offline:     { text: '⚠️ SYNC OFF',     bg: 'rgba(239,68,68,.1)',   border: 'rgba(239,68,68,.4)',  color: '#ef4444' },
+    sending:     { text: '📤 SENDING',      bg: 'rgba(0,212,255,.1)',   border: 'rgba(0,212,255,.4)',  color: '#00d4ff' },
+    receiving:   { text: '📥 RECEIVED',     bg: 'rgba(16,185,129,.2)', border: 'rgba(16,185,129,.6)', color: '#10b981' },
+  };
+  const s = states[state] || states.offline;
+  el.textContent = s.text;
+  el.style.background = s.bg;
+  el.style.border = '1px solid ' + s.border;
+  el.style.color = s.color;
+  el.style.display = 'flex';
+  if (state === 'sending' || state === 'receiving') {
+    setTimeout(() => setSyncStatus('live'), 1500);
+  }
+}
+
+/* Push a cheat event to Firebase (called on CANDIDATE side) */
+function syncAlertToFirebase(type, title, desc, sev, ts, elapsed) {
+  if (!sessionRef || role !== 'candidate') return;
+  try {
+    setSyncStatus('sending');
+    sessionRef.child('alerts').push({
+      type, title, desc, sev, ts, elapsed,
+      candidateName: userName,
+      serverTs: firebase.database.ServerValue.TIMESTAMP
+    });
+    // Also sync current trust score
+    sessionRef.child('trust').set(Math.round(trust));
+  } catch(e) { console.warn('Firebase push failed:', e); }
+}
+
+/* Sync trust score update to Firebase */
+function syncTrustToFirebase() {
+  if (!sessionRef || role !== 'candidate') return;
+  try { sessionRef.child('trust').set(Math.round(trust)); } catch(e) {}
+}
+
+/* Interviewer: listen for incoming alerts from candidate */
+function startFirebaseListener() {
+  if (!sessionRef || role !== 'interviewer') return;
+
+  let firstLoad = true;
+
+  // Listen for new alerts
+  sessionRef.child('alerts').on('child_added', snap => {
+    if (firstLoad) return; // skip pre-existing alerts on first load
+    const a = snap.val();
+    if (!a) return;
+    setSyncStatus('receiving');
+    // Inject the alert into the interviewer UI
+    injectRemoteAlert(a);
+  });
+
+  // Mark first-load done after initial batch
+  sessionRef.child('alerts').once('value', () => { firstLoad = false; });
+
+  // Live trust score mirror
+  sessionRef.child('trust').on('value', snap => {
+  const remTrust = snap.val();
+
+  if (firstLoad) return; // 🚫 ignore old previous session value
+
+  if (remTrust === null) return;
+  trust = remTrust;
+  updateTrustUI();
+});
+}
+
+/* Render a remote alert (received by interviewer) */
+function injectRemoteAlert(a) {
+  // Update counts
+  counts[a.type] = (counts[a.type] || 0) + 1;
+  const el = document.getElementById('dn-' + a.type);
+  if (el) el.textContent = counts[a.type];
+
+  const card = document.getElementById('dc-' + a.type);
+  const stat = document.getElementById('ds-' + a.type);
+  if (card) { card.classList.add('hit'); setTimeout(() => card.classList.remove('hit'), 500); }
+  if (stat) {
+    stat.className = 'dstatus ' + (a.sev === 'high' ? 'bad' : a.sev === 'medium' ? 'mid' : 'ok');
+    const map = { gaze:'DRIFTING', multi:'DETECTED', phone:'DETECTED', noface:'ABSENT', voice:'DETECTED', tab:'SWITCHED', strict_:'FLAGGED' };
+    stat.textContent = map[a.type] || 'ALERT';
+  }
+
+  // Append to alerts log
+  alerts.push({ type: a.type, title: a.title, desc: a.desc, sev: a.sev, ts: a.ts, elapsed: a.elapsed });
+  renderAlerts();
+  updateReport();
+  flashBorder();
+
+  // Show a toast on interviewer side
+  showRemoteAlertToast(a);
+}
+
+function showRemoteAlertToast(a) {
+  const t = document.getElementById('violationToast');
+  if (!t) return;
+  t.textContent = `📡 LIVE — ${a.title}`;
+  t.style.background = a.sev === 'high' ? '#ef4444' : a.sev === 'medium' ? '#d97706' : '#0080ff';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ────────────────────────────────────────────────
+   STATE
+──────────────────────────────────────────────── */
+let client;
+let localTrack;
+let recognition;
+let transcript = "";
+
+let lastSpeechTime = Date.now();
+let gazeOffStreak = 0;
+let role = 'interviewer', userName = '', stream = null;
+let secs = 0, timerInt = null, trust = 100;
+let alerts = [], counts = {gaze:0,multi:0,phone:0,noface:0,voice:0,tab:0};
+let gazePoints = [], micOn = true, camOn = true;
+let faceApiReady = false, detectionRunning = false;
+let lastGazeAlert = 0, noFaceStreak = 0 ;
+let lastNoFaceAlert = null;  // ✅ cooldown for face absent
+let detectionStartTime = Date.now();   // ✅ for startup delay
+let multiFaceFrames = 0;               // ✅ moved out of loop
+let lastMultiAlert = 0;    
+let faceDetectedStreak = 0;  // ✅ ADD HERE            // ✅ moved out of loop
+let gazeAwayStart = null;
+let gazeOffTimerStart = null; // dedicated gaze timer
+let simGazeActive = false;
+
+/* ────────────────────────────────────────────────
+   LOADER  – waits for face-api.js
+──────────────────────────────────────────────── */
+
+function setLoader(pct, msg) {
+  document.getElementById('loaderBar').style.width = pct + '%';
+  document.getElementById('loaderMsg').textContent = msg;
+}
+
+async function waitForFaceApi() {
+  return new Promise(res => {
+    const check = () => { if(typeof faceapi !== 'undefined') res(); else setTimeout(check, 200); };
+    check();
+  });
+}
+async function loadModels() {
+  setLoader(5, 'Connecting to campro server…');
+  await fetchBackendConfig();
+  setLoader(10, 'Loading face-api.js…');
+  await waitForFaceApi();
+
+  const MODEL_URL = './models';
+
+  try {
+    setLoader(30, 'Loading face detector...');
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+
+    setLoader(60, 'Loading face landmarks...');
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+
+    faceApiReady = true;
+    setLoader(100, 'Ready!');
+  } catch(e) {
+    console.error(e);
+    setLoader(100, 'Model load failed');
+    faceApiReady = false;
+  }
+
+  setTimeout(() => {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('lobby').style.display = 'flex';
+  }, 400);
+}
+async function joinCall() {
+  const roomId = document.getElementById("midInp").value.trim() || 'INTGR-2024-X7K';
+
+  // Fetch a signed Agora token from our backend (secure)
+  let agoraToken = null;
+  let appId = AGORA_APP_ID;
+  try {
+    const tokenRes = await fetch(`/api/token?channel=${encodeURIComponent(roomId)}&uid=0`);
+    const tokenData = await tokenRes.json();
+    agoraToken = tokenData.token;
+    if (tokenData.appId) appId = tokenData.appId;
+  } catch (e) {
+    console.warn('[Agora] Token fetch failed, trying no-token mode:', e);
+  }
+
+  client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+  await client.join(appId, roomId, agoraToken, null);
+
+  let localAudioTrack, localVideoTrack;
+
+  if (role === 'candidate' && stream) {
+    // Candidate already opened camera via startCamera() for face-api.
+    // Reuse those exact MediaStreamTracks so we don't open the device twice.
+    localVideoTrack = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: stream.getVideoTracks()[0] });
+    localAudioTrack = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: stream.getAudioTracks()[0] });
+  } else {
+    // Interviewer: open camera fresh via Agora
+    [localAudioTrack, localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    localVideoTrack.play('ivTile');
+    document.getElementById('ivCamMsg').style.display = 'none';
+  }
+
+  await client.publish([localVideoTrack, localAudioTrack]);
+
+  // Helper: route a remote user's track into the correct tile
+  function showRemoteTrack(user, mediaType) {
+    if (mediaType === "video") {
+      if (role === "interviewer") {
+        user.videoTrack.play('canTile');
+        document.getElementById('camMsg').style.display = 'none';
+      } else {
+        user.videoTrack.play('ivTile');
+        document.getElementById('ivCamMsg').style.display = 'none';
+      }
+    }
+    if (mediaType === "audio") {
+      user.audioTrack.play();
+    }
+  }
+
+  // Subscribe to anyone already in the room (joined before us)
+  for (const remoteUser of client.remoteUsers) {
+    for (const mediaType of ["video", "audio"]) {
+      if ((mediaType === "video" && remoteUser.hasVideo) ||
+          (mediaType === "audio" && remoteUser.hasAudio)) {
+        await client.subscribe(remoteUser, mediaType);
+        showRemoteTrack(remoteUser, mediaType);
+      }
+    }
+  }
+
+  client.on("user-published", async (user, mediaType) => {
+    await client.subscribe(user, mediaType);
+    showRemoteTrack(user, mediaType);
+  });
+
+  client.on("user-unpublished", (user) => {
+    if (role === "interviewer") {
+      document.getElementById('camMsg').style.display = 'flex';
+    } else {
+      document.getElementById('ivCamMsg').style.display = 'flex';
+      document.getElementById('ivStatus').textContent = 'Disconnected';
+    }
+  });
+}
+loadModels();
+
+/* ────────────────────────────────────────────────
+   LOBBY
+──────────────────────────────────────────────── */
+function setRole(r) {
+  role = r;
+  document.getElementById('rI').classList.toggle('active', r==='interviewer');
+  document.getElementById('rC').classList.toggle('active', r==='candidate');
+}
+
+function applyRoleUI() {
+  if (role === 'candidate') {
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.status-strip').style.display = 'none';
+    document.getElementById('strictBtn').style.display = 'none';
+    document.getElementById('examBadge').style.display = 'none';
+    document.querySelectorAll('.cbtn.sim').forEach(b => b.style.display = 'none');
+    document.querySelector('.trust-chip').style.display = 'none';
+    document.querySelector('.layout').style.gridTemplateColumns = '1fr';
+    // Rename leave buttons
+    document.querySelectorAll('.cbtn.danger').forEach(b => { b.innerHTML = '🚪 Leave'; });
+    document.querySelectorAll('.end-btn').forEach(b => { b.innerHTML = '🚪 Leave'; });
+  }
+}
+function runDetection() {
+  // Heartbeat for detection systems that don't use requestAnimationFrame.
+  // face-api runs its own rAF loop via startFaceDetection();
+  // this is reserved for audio / tab / extra checks.
+  updateReport();
+}
+async function join() {
+  userName = document.getElementById('nameInp').value.trim() || (role==='interviewer'?'Interviewer':'Candidate');
+  const mid = document.getElementById('midInp').value.trim() || 'INTGR-2024-X7K';
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('midDisplay').textContent = mid;
+  if(role==='interviewer') {
+    document.getElementById('ivNameTag').textContent = userName;
+    document.getElementById('ivName').textContent = userName;
+  } else {
+    document.getElementById('canName').textContent = userName;
+  }
+  startTimer();
+  applyRoleUI();
+
+  // Register session with backend
+  try {
+    await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meetingId: mid, interviewerName: role === 'interviewer' ? userName : '', candidateName: role === 'candidate' ? userName : '', role })
+    });
+  } catch (e) { console.warn('[Session] Register failed:', e); }
+
+  // ── FIREBASE: init real-time sync ──
+  initFirebase(mid);
+  // 🔥 RESET SESSION DATA (VERY IMPORTANT)
+trust = 100;
+alerts = [];
+counts = {gaze:0,multi:0,phone:0,noface:0,voice:0,tab:0};
+secs = 0;
+
+updateTrustUI();
+updateReport();
+
+// 🔥 Reset Firebase (only candidate does this)
+if (role === 'candidate') {
+  sessionRef.update({
+    trust: 100,
+    alerts: null
+  });
+}
+  if (role === 'interviewer') {
+    // Interviewer listens for candidate events
+    // Small delay to let Firebase connect first
+    setTimeout(startFirebaseListener, 1500);
+    document.getElementById('syncBadge').style.display = 'flex';
+  }
+
+  if (role === 'candidate') {
+    await startCamera();
+  } else {
+    setFaceStatus('b', 'Interviewer mode');
+  }
+  joinCall();
+ if (role === 'candidate') {
+  setInterval(runDetection, 200);
+  startTabDetection();
+  startSpeechRecognition();
+};
+  drawGazeCanvas();
+  updateReport();
+}
+
+/* ────────────────────────────────────────────────
+   CAMERA
+──────────────────────────────────────────────── */
+async function startCamera() {
+  const video = document.getElementById('canVideo');
+  const msg = document.getElementById('camMsg');
+  const icon = document.getElementById('camIcon');
+  const txt  = document.getElementById('camText');
+  const stat = document.getElementById('camStatus');
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{width:640,height:480,facingMode:'user'}, audio:true });
+    video.srcObject = stream;
+    startVoiceDetection(stream);
+    video.style.display = 'block';
+    msg.style.display = 'none';
+
+    video.onloadedmetadata = () => {
+    detectionStartTime = Date.now();  // ✅ reset timer when camera starts
+      setFaceStatus('g', 'Camera active');
+      if(faceApiReady) startFaceDetection(video);
+      else { setFaceStatus('y','Sim mode — models unavailable'); startSimGaze(); }
+    };
+  } catch(err) {
+    // No camera — graceful fallback
+    icon.textContent = '🎬';
+    txt.textContent = 'Camera not available';
+    stat.textContent = 'Running in demo/simulation mode';
+    setFaceStatus('y', 'Demo mode — use Simulate buttons');
+    startSimGaze();
+  }
+}
+function startVoiceDetection(stream) {
+  const audioContext = new AudioContext();
+  const mic = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+
+  analyser.fftSize = 1024;
+  mic.connect(analyser);
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+
+  let noiseHistory = [];
+
+  setInterval(() => {
+    analyser.getByteFrequencyData(data);
+
+    let avg = data.reduce((a, b) => a + b) / data.length;
+
+    noiseHistory.push(avg);
+    if (noiseHistory.length > 10) noiseHistory.shift();
+
+    const variation =
+      Math.max(...noiseHistory) - Math.min(...noiseHistory);
+
+    // 🔥 Detect multiple voices via instability
+    if (variation > 25 && avg > 50) {
+      addAlert(
+        'voice',
+        '🎙️ Multiple Voices',
+        'Unstable audio pattern detected',
+        'medium'
+      );
+    }
+  }, 700);
+}
+// speech detection function
+
+function startSpeechRecognition() {
+  console.log("Speech recognition started");
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    console.log("Speech Recognition not supported");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+ recognition.interimResults = false;
+
+ recognition.onresult = (event) => {
+  let finalText = "";
+
+  for (let i = 0; i < event.results.length; i++) {
+    if (event.results[i].isFinal) {
+      finalText += event.results[i][0].transcript;
+    }
+  }
+
+  if (finalText.trim().length > 0) {
+    console.log("Final Transcript:", finalText);
+
+    lastSpeechTime = Date.now();
+    analyzeAnswerAI(finalText);
+  }
+};
+ recognition.onend = () => {
+  recognition.start(); // 🔁 restart automatically
+};
+  recognition.start();
+}
+// ai analyzer
+function analyzeAnswerAI(text) {
+  console.log("Analyzing:", text);
+  let score = 0;
+
+  if (text.length > 120) score += 15;
+
+  const patterns = [
+    "in conclusion",
+    "it is important to note",
+    "furthermore",
+    "this can be explained",
+    "overall"
+  ];
+
+  patterns.forEach(p => {
+    if (text.toLowerCase().includes(p)) score += 10;
+  });
+
+  let words = text.split(" ");
+  let unique = new Set(words);
+  if (unique.size / words.length < 0.6) score += 10;
+
+  let delay = (Date.now() - lastSpeechTime) / 1000;
+  if (delay > 3) score += 15;
+
+  if (gazeOffStreak > 30) score += 20;
+
+  let probability = Math.min(score, 100);
+
+  updateAIProbability(probability);
+}
+function updateAIProbability(p) {
+  const color = p > 70 ? "var(--danger)" : p > 40 ? "var(--warn)" : "var(--success)";
+
+  const el = document.getElementById("aiProb");
+  if (el) { el.innerText = `${p}%`; el.style.color = color; }
+
+  const elR = document.getElementById("aiProbReport");
+  if (elR) { elR.innerText = `${p}%`; elR.style.color = color; }
+}
+/*function startVoiceDetection(stream){
+  const audioContext = new AudioContext();
+  const mic = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+
+  mic.connect(analyser);
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+
+  let spikeCount = 0;
+
+  setInterval(()=>{
+    analyser.getByteFrequencyData(data);
+
+    let avg = data.reduce((a,b)=>a+b)/data.length;
+
+    if(avg > 70){
+      spikeCount++;
+
+      if(spikeCount > 4){
+        addAlert('voice','🎙️ Multiple Voices','Background voice detected','medium');
+        spikeCount = 0;
+      }
+    } else {
+      spikeCount = 0;
+    }
+
+  }, 500);
+}
+/*function startVoiceDetection(stream){
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const mic = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+
+  mic.connect(analyser);
+  analyser.fftSize = 512;
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+
+  let voicePeaks = 0;
+
+  setInterval(() => {
+    analyser.getByteFrequencyData(data);
+
+    let volume = data.reduce((a,b)=>a+b,0) / data.length;
+
+    // If unusually high / irregular → possible multiple voices
+    if(volume > 60){
+      voicePeaks++;
+
+      if(voicePeaks > 5){
+        addAlert(
+          'voice',
+          '🎙️ Multiple Voices Detected',
+          'Background voices detected. Possible external help.',
+          'medium'
+        );
+        voicePeaks = 0;
+      }
+    } else {
+      voicePeaks = Math.max(0, voicePeaks - 1);
+    }
+
+  }, 500);
+}
+
+/* ────────────────────────────────────────────────
+   FACE DETECTION (face-api.js)
+──────────────────────────────────────────────── */
+async function startFaceDetection(video) {
+  if (detectionRunning) return;
+  detectionRunning = true;
+
+  const canvas = document.getElementById('faceCanvas');
+  const opts = new faceapi.TinyFaceDetectorOptions({
+    inputSize: 512,         // higher = more accurate detection
+    scoreThreshold: 0.45
+  });
+
+  async function loop() {
+    if (!detectionRunning) return;
+
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    let detections;
+    try {
+      detections = await faceapi
+        .detectAllFaces(video, opts)
+        .withFaceLandmarks();
+    } catch(e) {
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    if (!detections || detections.length === 0) {
+      // ── NO FACE ──
+      handleNoFaceImproved();
+
+    } else {
+      // ── FACE FOUND ──
+      faceDetectedStreak++;
+      noFaceStreak = 0;
+      window.noFaceStart = null;
+      setFaceStatus('g', 'Face detected ✓');
+
+      // ── MULTI FACE ──
+      if (detections.length > 1) {
+        multiFaceFrames++;
+        document.getElementById('mfitem').style.display = 'flex';
+        if (multiFaceFrames > 10 && Date.now() - lastMultiAlert > 8000) {
+          lastMultiAlert = Date.now();
+          addAlert('multi', '👥 Multiple Faces',
+            `${detections.length} faces detected continuously`, 'high');
+          flashBorder();
+        }
+      } else {
+        multiFaceFrames = 0;
+        multiFaceActive = false;
+        document.getElementById('mfitem').style.display = 'none';
+      }
+
+      // ── GAZE + DRAW ──
+      const d = detections[0];
+      drawFaceOverlay(ctx, d, canvas);
+      analyzeGazeAdvanced(d.landmarks, canvas);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+}
+/*async function startFaceDetection(video) {
+  if(detectionRunning) return;
+  detectionRunning = true;
+  const canvas = document.getElementById('faceCanvas');
+  const opts = new faceapi.TinyFaceDetectorOptions({ inputSize:320, scoreThreshold:0.4 });
+
+  const loop = async () => {
+    console.log("Detection loop running");
+    if(!detectionRunning) return;
+    try {
+      // Match canvas size to video
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+
+      const detections = video.withFaceLandmarks();
+        
+  
+
+        console.log("Faces detected:", detections.length);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!detections || detections.length === 0) {
+        handleNoFace();
+      } else {
+        noFaceStreak = 0;
+        setFaceStatus('g','Face detected ✓');
+
+        if(detections.length > 1) handleMultiFace(detections.length);
+        else document.getElementById('mfitem').style.display='none';
+
+        const d = detections[0];
+        drawFaceOverlay(ctx, d, canvas);
+        analyzeGazeFromLandmarks(d.landmarks, canvas);
+      }
+    } catch(e) {}
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+function drawFaceOverlay(ctx, detection, canvas) {
+  const lm = detection.landmarks;
+  const box = detection.detection.box;
+  const W = canvas.width, H = canvas.height;
+
+  // Bounding box
+  const isAlert = gazeOffStreak > 10;
+  ctx.strokeStyle = isAlert ? 'rgba(239,68,68,0.75)' : 'rgba(16,185,129,0.6)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(box.x, box.y, box.width, box.height, 8);
+  ctx.stroke();
+
+  // Corner accents
+  const drawCorner = (x,y,dx,dy) => {
+    ctx.beginPath();
+    ctx.moveTo(x+dx*16,y); ctx.lineTo(x,y); ctx.lineTo(x,y+dy*16);
+    ctx.stroke();
+  };
+  ctx.lineWidth=2.5; ctx.strokeStyle=isAlert?'#ef4444':'#10b981';
+  drawCorner(box.x,box.y,1,1);
+  drawCorner(box.x+box.width,box.y,-1,1);
+  drawCorner(box.x,box.y+box.height,1,-1);
+  drawCorner(box.x+box.width,box.y+box.height,-1,-1);
+
+  // Eye landmarks
+  const drawPts = (pts,color) => {
+    ctx.beginPath();
+    pts.forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.globalAlpha=.8; ctx.stroke(); ctx.globalAlpha=1;
+  };
+
+  try {
+    const le = lm.getLeftEye();
+    const re = lm.getRightEye();
+    drawPts(le, '#00d4ff');
+    drawPts(re, '#00d4ff');
+
+    // Eye center dots
+    const eyeCenterX = (le.reduce((s,p)=>s+p.x,0)/le.length + re.reduce((s,p)=>s+p.x,0)/re.length)/2;
+    const eyeCenterY = (le.reduce((s,p)=>s+p.y,0)/le.length + re.reduce((s,p)=>s+p.y,0)/re.length)/2;
+    ctx.beginPath(); ctx.arc(eyeCenterX,eyeCenterY,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,212,255,0.9)'; ctx.fill();
+
+    // Nose
+    const nose = lm.getNose();
+    ctx.beginPath(); ctx.arc(nose[3].x,nose[3].y,2.5,0,Math.PI*2);
+    ctx.fillStyle='rgba(245,158,11,0.7)'; ctx.fill();
+  } catch(e){}
+
+  // Label
+  const score = Math.round(trust);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(box.x, box.y-22, 120, 18);
+  ctx.fillStyle = isAlert ? '#ef4444' : '#10b981';
+  ctx.font = 'bold 11px Space Mono';
+  ctx.fillText(`TRUST: ${score}%`, box.x+4, box.y-8);
+}
+
+/* ────────────────────────────────────────────────
+   GAZE ANALYSIS from face landmarks
+
+   ────────────────────────────────────────────────*/
+   /*function analyzeGazeAdvanced(landmarks, canvas) {
+  try {
+    const nose = landmarks.getNose();
+    const jaw = landmarks.getJawOutline();
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const noseTip = nose[3];
+    const faceLeft = jaw[0];
+    const faceRight = jaw[16];
+
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth = Math.abs(faceRight.x - faceLeft.x);
+
+    // LEFT / RIGHT head turn
+    const yaw = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    // Eye center position
+    const eyeX =
+      (leftEye.reduce((s, p) => s + p.x, 0) / leftEye.length +
+        rightEye.reduce((s, p) => s + p.x, 0) / rightEye.length) / 2;
+
+    const eyeY =
+      (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length +
+        rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) / 2;
+
+    // DOWN detection
+    const faceHeight = Math.abs(jaw[8].y - eyeY);
+    const downward = (noseTip.y - eyeY) > faceHeight * 0.35;
+
+    // true = looking away from screen
+    const off = Math.abs(yaw) > 0.18 || downward;
+
+    // Heatmap
+    pushGaze(eyeX / W, eyeY / H, off);
+
+    const now = Date.now();
+
+    if (off) {
+      // ── Start timer the moment gaze goes off ──
+     if (!gazeOffTimerStart) {
+  gazeOffTimerStart = now;
+}
+
+const secondsAway = (now - gazeOffTimerStart) / 1000;
+
+      // Update status bar with live countdown
+      const dir = downward ? 'Looking down' : 'Looking away';
+      setGazeStatus('r', `${dir} — ${secondsAway.toFixed(1)}s`);
+
+      // ── Alert only after 8 continuous seconds ──
+      if (secondsAway >= 8 && now - lastGazeAlert > 12000) {
+        lastGazeAlert = now;
+        gazeAwayStart = now; // reset so next 8s triggers again
+
+        addAlert(
+          'gaze',
+          '👁️ Sustained Gaze Away',
+          `Candidate looked away continuously for ${Math.round(secondsAway)} seconds.`,
+          'medium'
+        );
+        flashBorder();
+      }
+
+      // ── Phone alert: downward gaze for 12+ seconds ──
+      if (downward && secondsAway >= 12 && now - lastGazeAlert > 15000) {
+        lastGazeAlert = now;
+        gazeAwayStart = now;
+
+        addAlert(
+          'phone',
+          '📱 Possible Phone Use',
+          `Continuous downward gaze for ${Math.round(secondsAway)} seconds.`,
+          'high'
+        );
+        flashBorder();
+      }
+
+    } else {
+      // ── Gaze is back on screen ──
+      gazeOffTimerStart = null;
+gazeAwayStart = null;
+gazeOffStreak = 0;
+setGazeStatus('g', 'Looking at screen ✓');
+    }
+
+  } catch (e) {}
+}*/
+function analyzeGazeAdvanced(landmarks, canvas) {
+  try {
+    const nose     = landmarks.getNose();
+    const jaw      = landmarks.getJawOutline();
+    const leftEye  = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // ── HEAD TURN (yaw) ──
+    const noseTip     = nose[3];
+    const faceLeft    = jaw[0];
+    const faceRight   = jaw[16];
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth   = Math.abs(faceRight.x - faceLeft.x);
+    const yaw         = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    // ── EYE CENTER ──
+    const leftEyeCX  = leftEye.reduce((s,p)  => s + p.x, 0) / leftEye.length;
+    const leftEyeCY  = leftEye.reduce((s,p)  => s + p.y, 0) / leftEye.length;
+    const rightEyeCX = rightEye.reduce((s,p) => s + p.x, 0) / rightEye.length;
+    const rightEyeCY = rightEye.reduce((s,p) => s + p.y, 0) / rightEye.length;
+    const eyeCX = (leftEyeCX + rightEyeCX) / 2;
+    const eyeCY = (leftEyeCY + rightEyeCY) / 2;
+
+    // ── IRIS POSITION inside each eye socket ──
+    // face-api gives 6 points per eye: 0=left corner, 3=right corner, 1-2=top, 4-5=bottom
+    const leftEyeWidth   = Math.abs(leftEye[3].x  - leftEye[0].x);
+    const rightEyeWidth  = Math.abs(rightEye[3].x - rightEye[0].x);
+
+    // Iris X ratio: 0=far left, 0.5=center, 1=far right
+    const leftIrisRatio  = leftEyeWidth  > 0 ? (leftEyeCX  - leftEye[0].x)  / leftEyeWidth  : 0.5;
+    const rightIrisRatio = rightEyeWidth > 0 ? (rightEyeCX - rightEye[0].x) / rightEyeWidth : 0.5;
+    const avgIrisRatio   = (leftIrisRatio + rightIrisRatio) / 2;
+
+    // ── VERTICAL (up/down) ──
+    const faceHeight = Math.abs(jaw[8].y - eyeCY);
+    const downward   = (noseTip.y - eyeCY) > faceHeight * 0.33;
+    const upward     = (eyeCY - jaw[0].y)  < faceHeight * 0.15;
+
+    // ── COMBINE: head turn + iris position + vertical ──
+    // iris ratio <0.35 = looking left, >0.65 = looking right
+    const irisLookingAway = avgIrisRatio < 0.32 || avgIrisRatio > 0.68;
+    const headTurnedAway  = Math.abs(yaw) > 0.20;
+    const off = headTurnedAway || irisLookingAway || downward || upward;
+
+    // direction label
+    let direction = 'center';
+    if      (downward)                  direction = 'down (phone?)';
+    else if (upward)                    direction = 'up';
+    else if (avgIrisRatio < 0.32)       direction = 'left';
+    else if (avgIrisRatio > 0.68)       direction = 'right';
+    else if (yaw < -0.20)               direction = 'left (head)';
+    else if (yaw >  0.20)               direction = 'right (head)';
+
+    // Heatmap
+    pushGaze(eyeCX / W, eyeCY / H, off);
+
+    const now = Date.now();
+
+    if (off) {
+      if (!gazeOffTimerStart) gazeOffTimerStart = now;
+
+      const secondsAway = (now - gazeOffTimerStart) / 1000;
+
+      setGazeStatus('r', `Looking ${direction} — ${secondsAway.toFixed(1)}s`);
+
+      // ── Alert after 8 real seconds ──
+      if (secondsAway >= 8 && now - lastGazeAlert > 12000) {
+        lastGazeAlert     = now;
+        gazeOffTimerStart = now; // reset so next 8s can trigger again
+
+        addAlert(
+          'gaze',
+          `👁️ Gaze Away — ${direction}`,
+          `Candidate looked ${direction} continuously for ${Math.round(secondsAway)} seconds.`,
+          'medium'
+        );
+        flashBorder();
+      }
+
+      // ── Phone alert: downward for 10+ seconds ──
+      if (downward && secondsAway >= 10 && now - lastGazeAlert > 15000) {
+        lastGazeAlert     = now;
+        gazeOffTimerStart = now;
+
+        addAlert(
+          'phone',
+          '📱 Possible Phone Use',
+          `Sustained downward gaze for ${Math.round(secondsAway)} seconds.`,
+          'high'
+        );
+        flashBorder();
+      }
+
+    } else {
+      // ── back on screen — reset everything ──
+      gazeOffTimerStart = null;
+      gazeAwayStart     = null;
+      gazeOffStreak     = 0;
+      setGazeStatus('g', `Gaze: on-screen ✓  iris:${avgIrisRatio.toFixed(2)}`);
+    }
+
+  } catch(e) { console.warn('Gaze error:', e); }
+}
+    
+/*function analyzeGazeAdvanced(landmarks, canvas) {
+  try {
+    const nose = landmarks.getNose();
+    const jaw = landmarks.getJawOutline();
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const noseTip = nose[3];
+    const faceLeft = jaw[0];
+    const faceRight = jaw[16];
+
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth = Math.abs(faceRight.x - faceLeft.x);
+
+    // LEFT / RIGHT detection
+    const yaw = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    // Eye center
+    const eyeX =
+      (leftEye.reduce((s, p) => s + p.x, 0) / leftEye.length +
+        rightEye.reduce((s, p) => s + p.x, 0) / rightEye.length) /
+      2;
+
+    const eyeY =
+      (leftEye.reduce((s, p) => s + p.y, 0) / leftEye.length +
+        rightEye.reduce((s, p) => s + p.y, 0) / rightEye.length) /
+      2;
+
+    // DOWN detection
+    const faceHeight = Math.abs(jaw[8].y - eyeY);
+    const downward = (noseTip.y - eyeY) > faceHeight * 0.35;
+
+    const off = Math.abs(yaw) > 0.18 || downward;
+
+    // 🔥 HEATMAP FIX
+    pushGaze(eyeX / W, eyeY / H, off);
+
+    if (off) {
+      gazeOffStreak++;
+
+      setGazeStatus('r', downward ? 'Looking down' : 'Looking away');
+
+      if (gazeOffStreak === 30) {
+        addAlert(
+          'gaze',
+          '👁️ Gaze Drift',
+          'Candidate looking away from screen',
+          'medium'
+        );
+      }
+
+      if (gazeOffStreak === 80) {
+        addAlert(
+          'phone',
+          '📱 Possible Phone Use',
+          'Continuous downward gaze detected',
+          'high'
+        );
+      }
+    } else {
+      gazeOffStreak = Math.max(0, gazeOffStreak - 2);
+      setGazeStatus('g', 'Looking at screen ✓');
+    }
+  } catch (e) {}
+}
+   /*function analyzeGazeFromLandmarks(landmarks, canvas) {
+  try {
+    const nose = landmarks.getNose();
+    const jaw = landmarks.getJawOutline();
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    const W = canvas.width;
+
+    const noseTip = nose[3];
+    const faceLeft = jaw[0];
+    const faceRight = jaw[16];
+
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth = Math.abs(faceRight.x - faceLeft.x);
+
+    const yaw = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    const downward = (noseTip.y - leftEye[0].y) > 20;
+
+    const off = Math.abs(yaw) > 0.2 || downward;
+
+    if (off) {
+      gazeOffStreak++;
+
+      if (gazeOffStreak === 20) {
+        addAlert('gaze','👁️ Looking Away','User not looking at screen','medium');
+        flashBorder();
+      }
+
+      if (gazeOffStreak === 60) {
+        addAlert('phone','📱 Phone Usage','Looking down continuously','high');
+        flashBorder();
+      }
+
+    } else {
+      gazeOffStreak = 0;
+    }
+
+  } catch(e) {}
+}
+/*function analyzeGazeFromLandmarks(landmarks, canvas) {
+  function analyzeGazeFromLandmarks(landmarks, canvas) {
+  try {
+    const nose      = landmarks.getNose();
+    const jaw       = landmarks.getJawOutline();
+    const leftEye   = landmarks.getLeftEye();
+    const rightEye  = landmarks.getRightEye();
+    const W = canvas.width, H = canvas.height;
+
+    const noseTip     = nose[3];
+    const faceLeft    = jaw[0];
+    const faceRight   = jaw[16];
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth   = Math.abs(faceRight.x - faceLeft.x);
+    const yaw         = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    const leftEyeCenterX  = leftEye.reduce((s,p)=>s+p.x,0)/leftEye.length;
+    const leftEyeCenterY  = leftEye.reduce((s,p)=>s+p.y,0)/leftEye.length;
+    const rightEyeCenterX = rightEye.reduce((s,p)=>s+p.x,0)/rightEye.length;
+    const rightEyeCenterY = rightEye.reduce((s,p)=>s+p.y,0)/rightEye.length;
+    const eyeCenterX = (leftEyeCenterX + rightEyeCenterX) / 2;
+    const eyeCenterY = (leftEyeCenterY + rightEyeCenterY) / 2;
+
+    const faceHeight = Math.abs(jaw[8].y - eyeCenterY);
+    const downward   = (noseTip.y - eyeCenterY) > faceHeight * 0.35;
+    const off        = Math.abs(yaw) > 0.18 || downward;
+
+    // Heatmap
+    const gx = Math.min(1, Math.max(0, eyeCenterX / W));
+    const gy = Math.min(1, Math.max(0, eyeCenterY / H));
+    pushGaze(gx, gy, off);
+
+    if (off) {
+      gazeOffStreak++;
+      if (!gazeAwayStart) gazeAwayStart = Date.now();
+
+      if (downward) setGazeStatus('r', 'Looking downward (possible phone)');
+      else          setGazeStatus('r', 'Looking away from screen');
+
+      // Prolonged away > 10s → HIGH alert
+      const awayDuration = (Date.now() - gazeAwayStart) / 1000;
+      if (awayDuration > 10 && Date.now() - lastGazeAlert > 12000) {
+        lastGazeAlert = Date.now();
+        addAlert('gaze','👁️ Prolonged Gaze Away',
+          'Candidate has been looking away from the screen for over 10 seconds.','high');
+        flashBorder();
+        gazeAwayStart = null;
+      }
+
+      // Repeated drift streak → MEDIUM alert
+      if (gazeOffStreak > 50 && Date.now() - lastGazeAlert > 5000) {
+        lastGazeAlert = Date.now();
+        addAlert('gaze','👁️ Gaze Drift Detected',
+          'Candidate gaze suggests reading from an external source.','medium');
+        flashBorder();
+        gazeOffStreak = 0;
+      }
+
+      // Phone heuristic: sustained downward gaze > 5s
+      if (downward && awayDuration > 5 && Date.now() - lastGazeAlert > 8000)
+      {if (downward && gazeOffStreak > 30) {
+  addAlert(
+    'phone',
+    '📱 Strong Phone Suspicion',
+    'Continuous downward gaze suggests phone usage.',
+    'high'
+  );
+}} {
+        lastGazeAlert = Date.now();
+        addAlert('phone','📱 Possible Device Use',
+          'Sustained downward gaze detected — candidate may be reading from a phone.','high');
+        flashBorder();
+      }
+
+    } else {
+      gazeOffStreak = Math.max(0, gazeOffStreak - 1);
+      gazeAwayStart = null;
+      setGazeStatus('g', 'Gaze: On-screen ✓');
+    }
+  } catch(e) { console.warn('Gaze analysis error:', e); }
+}
+}
+ /* console.log("Gaze detection running");
+  function analyzeGazeFromLandmarks(landmarks, canvas) {
+  try {
+
+    const nose = landmarks.getNose();
+    const jaw  = landmarks.getJawOutline();
+    const leftEye = landmarks.getLeftEye();
+    const rightEye = landmarks.getRightEye();
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const noseTip = nose[3];
+
+    const faceLeft  = jaw[0];
+    const faceRight = jaw[16];
+
+    const faceCenterX = (faceLeft.x + faceRight.x) / 2;
+    const faceWidth = Math.abs(faceRight.x - faceLeft.x);
+
+    // Head turn detection
+    const yaw = (noseTip.x - faceCenterX) / (faceWidth * 0.5);
+
+    // Eye center
+    const leftEyeCenterX = leftEye.reduce((s,p)=>s+p.x,0)/leftEye.length;
+    const leftEyeCenterY = leftEye.reduce((s,p)=>s+p.y,0)/leftEye.length;
+
+    const rightEyeCenterX = rightEye.reduce((s,p)=>s+p.x,0)/rightEye.length;
+    const rightEyeCenterY = rightEye.reduce((s,p)=>s+p.y,0)/rightEye.length;
+
+    const eyeCenterX = (leftEyeCenterX + rightEyeCenterX)/2;
+    const eyeCenterY = (leftEyeCenterY + rightEyeCenterY)/2;
+
+    // Downward gaze detection
+    const faceHeight = Math.abs(jaw[8].y - eyeCenterY);
+    const downward = (noseTip.y - eyeCenterY) > faceHeight * 0.35;
+
+    // Heatmap position
+    const gx = Math.min(1, Math.max(0, eyeCenterX / W));
+    const gy = Math.min(1, Math.max(0, eyeCenterY / H));
+
+    const off = Math.abs(yaw) > 0.18 || downward;
+    if(off){
+    gazeOffStreak++;
+}else{
+    gazeOffStreak = 0;
+}
+if(gazeOffStreak > 50){
+
+    addAlert(
+        'gaze',
+        '👁️ Gaze Drift Detected',
+        'Candidate looking away from screen repeatedly.',
+        'medium'
+    );
+
+    gazeOffStreak = 0;
+}
+    // Detect prolonged gaze away
+if(off){
+
+    if(!gazeAwayStart){
+        gazeAwayStart = Date.now();
+    }
+
+    const duration = (Date.now() - gazeAwayStart) / 1000;
+
+    if(duration > 10){
+
+        addAlert(
+            'gaze',
+            '👁️ Prolonged Gaze Away',
+            'Candidate looking away from screen for more than 10 seconds.',
+            'high'
+        );
+
+        gazeAwayStart = null;
+    }
+
+}else{
+
+    gazeAwayStart = null;
+
+}
+
+    pushGaze(gx, gy, off);
+
+    if(off){
+        gazeOffStreak++;
+
+        if(downward){
+            setGazeStatus('r','Looking downward (possible phone)');
+        } else {
+            setGazeStatus('r','Looking away from screen');
+        }
+
+        if(gazeOffStreak > 15 && Date.now() - lastGazeAlert > 4000){
+            lastGazeAlert = Date.now();
+
+            addAlert(
+              'gaze',
+              '👁️ Gaze Deviation Detected',
+              'Candidate gaze suggests reading from external source.',
+              gazeOffStreak > 40 ? 'high' : 'medium'
+            );
+
+            flashBorder();
+        }
+
+    } else {
+        gazeOffStreak = Math.max(0, gazeOffStreak - 1);
+        setGazeStatus('g','Gaze: On-screen ✓');
+    }
+
+  } catch(e){}
+}
+}
+
+/* ────────────────────────────────────────────────
+   NO FACE / MULTI FACE
+──────────────────────────────────────────────── */
+function handleNoFaceImproved() {
+
+  // ignore first 5 seconds after joining
+  if (Date.now() - detectionStartTime < 5000) return;
+
+  faceDetectedStreak = 0;
+
+  // start the absent timer the moment face disappears
+  if (!lastNoFaceAlert || noFaceStreak === 0) {
+    if (!window.noFaceStart) window.noFaceStart = Date.now();
+  }
+
+  noFaceStreak++;
+
+  const secondsAbsent = (Date.now() - (window.noFaceStart || Date.now())) / 1000;
+
+  setFaceStatus('r', 'No face detected');
+
+  // alert only after 5 continuous real seconds
+  if (secondsAbsent >= 5 && Date.now() - lastNoFaceAlert > 15000) {
+    lastNoFaceAlert = Date.now();
+    window.noFaceStart = Date.now(); // reset for next cycle
+
+    addAlert(
+      'noface',
+      '🚫 Face Absent',
+      `Face not visible for ${Math.round(secondsAbsent)} continuous seconds.`,
+      secondsAbsent >= 10 ? 'high' : 'medium'
+    );
+    flashBorder();
+  }
+}
+/*function handleNoFace() {
+  noFaceStreak++;
+
+  setFaceStatus('r','No face detected!');
+
+  if(noFaceStreak === 15){
+    addAlert('noface','🚫 Face Missing','Face not visible','medium');
+    flashBorder();
+  }
+
+  if(noFaceStreak === 50){
+    addAlert('noface','🚫 Long Absence','User left camera','high');
+    flashBorder();
+  }
+}
+
+let lastMultiFaceTime = 0;
+
+function handleMultiFace(n) {
+  document.getElementById('mfitem').style.display = 'flex';
+
+  if(Date.now() - lastMultiFaceTime > 3000){
+    lastMultiFaceTime = Date.now();
+
+    addAlert(
+      'multi',
+      '👥 Multiple Faces',
+      `${n} faces detected`,
+      'high'
+    );
+
+    flashBorder();
+  }
+}
+
+/* ────────────────────────────────────────────────
+   SIMULATION GAZE (when no camera / no models)
+──────────────────────────────────────────────── */
+let simInt = null;
+function startSimGaze() {
+  clearInterval(simInt);
+  simInt = setInterval(() => {
+    const away = Math.random() < 0.12;
+    const gx = away ? (Math.random()<.5 ? Math.random()*.15 : .85+Math.random()*.15) : .25+Math.random()*.5;
+    const gy = away ? Math.random()*.4 : .2+Math.random()*.6;
+    pushGaze(gx, gy, away);
+    if(away) setGazeStatus('y','Gaze: simulated drift');
+    else setGazeStatus('g','Gaze: simulated normal');
+  }, 600);
+}
+
+/* ────────────────────────────────────────────────
+   GAZE CANVAS HEATMAP
+──────────────────────────────────────────────── */
+// Throttle Firebase gaze sync (max once per 200ms)
+let _lastGazeSync = 0;
+
+function pushGaze(x,y,away) {
+  gazePoints.push({x,y,away,t:Date.now()});
+  if(gazePoints.length>200) gazePoints.shift();
+  drawGazeCanvas();
+
+  // Candidate: push gaze to Firebase so interviewer can draw heatmap
+  if(role === 'candidate' && sessionRef) {
+    const now = Date.now();
+    if(now - _lastGazeSync > 200) {
+      _lastGazeSync = now;
+      sessionRef.child('gaze').set({ x: Math.round(x*1000)/1000, y: Math.round(y*1000)/1000, away, t: now });
+    }
+  }
+}
+
+function drawGazeCanvas() {
+  const c = document.getElementById('gazeCanvas');
+  const ctx = c.getContext('2d');
+  const W=c.width, H=c.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(8,12,20,0.9)'; ctx.fillRect(0,0,W,H);
+
+  // Screen zone box
+  ctx.strokeStyle='rgba(0,212,255,.25)'; ctx.lineWidth=1;
+  ctx.strokeRect(W*.08,H*.08,W*.84,H*.84);
+  ctx.fillStyle='rgba(0,212,255,.03)'; ctx.fillRect(W*.08,H*.08,W*.84,H*.84);
+  ctx.fillStyle='rgba(100,116,139,.6)'; ctx.font='8px Space Mono';
+  ctx.fillText('SCREEN',W*.08+4,H*.08+10);
+
+  // Plot gaze trail — fade by age (older = more transparent)
+  const now = Date.now();
+  const pts = gazePoints.slice(-120);
+  pts.forEach((p,i) => {
+    const ageFade = Math.max(0, 1 - (now - (p.t || now)) / 8000); // fade over 8s
+    const idxFade = i / pts.length;
+    const alpha = Math.min(ageFade, idxFade) * 0.85;
+    if (alpha < 0.02) return;
+    ctx.beginPath();
+    ctx.arc(p.x*W, p.y*H, 3.5, 0, Math.PI*2);
+    ctx.fillStyle = p.away ? `rgba(239,68,68,${alpha})` : `rgba(16,185,129,${alpha})`;
+    ctx.fill();
+  });
+
+  // Latest point
+  if(pts.length>0) {
+    const last=pts[pts.length-1];
+    ctx.beginPath(); ctx.arc(last.x*W,last.y*H,6,0,Math.PI*2);
+    ctx.strokeStyle=last.away?'#ef4444':'#10b981'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(last.x*W,last.y*H,3,0,Math.PI*2);
+    ctx.fillStyle=last.away?'#ef4444':'#10b981'; ctx.fill();
+  }
+}
+
+/* ────────────────────────────────────────────────
+   STATUS HELPERS
+──────────────────────────────────────────────── */
+function setFaceStatus(c,t){document.getElementById('fsdot').className='sdot '+c;document.getElementById('fstext').textContent=t;}
+function setGazeStatus(c,t){document.getElementById('gsdot').className='sdot '+c;document.getElementById('gstext').textContent=t;}
+
+/* ────────────────────────────────────────────────
+   TAB DETECTION
+──────────────────────────────────────────────── */
+function startTabDetection() {
+   if (role !== 'candidate') return;
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden) addAlert('tab','🖥️ Tab Switch','Candidate navigated away from the interview window.','medium');
+  });
+}
+
+/* ────────────────────────────────────────────────
+   SIMULATE CHEATING
+──────────────────────────────────────────────── */
+function sim(type) {
+  switch(type) {
+    case 'gaze':
+      // Push off-screen gaze points
+      for(let i=0;i<25;i++) pushGaze(Math.random()*.15+(Math.random()<.5?0:.85),Math.random()*.5,true);
+      addAlert('gaze','👁️ Prolonged Gaze Drift',
+        'Iris / head tracking shows candidate consistently looking off-screen. Background answer display or second screen suspected.','high');
+      flashBorder(); break;
+
+    case 'multi':
+      document.getElementById('mfitem').style.display='flex';
+      addAlert('multi','👥 Multiple Faces Detected',
+        '2 faces detected in video frame. A second person is visible — possible live coaching or answer prompting from background.','high');
+      flashBorder();
+      setTimeout(()=>document.getElementById('mfitem').style.display='none',5000); break;
+
+    case 'phone':
+      addAlert('phone','📱 Handheld Device Detected',
+        'Rectangular screen-lit object detected near candidate face. Likely reading AI-generated answers from a phone.','high');
+      flashBorder(); break;
+
+    case 'voice':
+      addAlert('voice','🎙️ Secondary Voice Detected',
+        'Audio processing identified a second speaker in the background. External coaching may be occurring.','medium'); break;
+  }
+}
+
+/* ────────────────────────────────────────────────
+   ALERT ENGINE
+──────────────────────────────────────────────── */
+function addAlert(type, title, desc, sev) {
+  if (role !== 'candidate') return;
+  counts[type]++;
+  const el = document.getElementById('dn-'+type);
+  if(el) el.textContent = counts[type];
+
+  // Card highlight
+  const card = document.getElementById('dc-'+type);
+  const stat = document.getElementById('ds-'+type);
+  if(card){card.classList.add('hit');setTimeout(()=>card.classList.remove('hit'),500);}
+  if(stat){
+    stat.className='dstatus '+(sev==='high'?'bad':sev==='medium'?'mid':'ok');
+    const map={gaze:'DRIFTING',multi:'DETECTED',phone:'DETECTED',noface:'ABSENT',voice:'DETECTED',tab:'SWITCHED'};
+    stat.textContent=map[type]||'ALERT';
+  }
+
+  // Trust penalty
+  const penalty = sev==='high'?13:sev==='medium'?7:3;
+  trust = Math.max(0, trust-penalty);
+  updateTrustUI();
+
+  // Log
+  const t=new Date(); const ts=`${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+  alerts.push({type,title,desc,sev,ts,elapsed:fmt(secs)});
+  renderAlerts();
+  updateReport();
+
+  // ── FIREBASE: push to interviewer in real-time ──
+  if (role === 'candidate') {
+    syncAlertToFirebase(type, title, desc, sev, ts, fmt(secs));
+  }
+}
+
+function flashBorder(){
+  const b=document.getElementById('alertBorder');
+  b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+}
+
+/* ────────────────────────────────────────────────
+   TRUST UI
+──────────────────────────────────────────────── */
+function updateTrustUI(){
+  const s=Math.round(trust);
+  const col=s>=70?'var(--success)':s>=40?'var(--warn)':'var(--danger)';
+  document.getElementById('trustBig').textContent=s;
+  document.getElementById('trustBig').style.color=col;
+  document.getElementById('tbarFill').style.width=s+'%';
+  document.getElementById('tbarFill').style.background=col;
+  document.getElementById('chipScore').textContent=s;
+  document.getElementById('chipScore').style.color=col;
+}
+
+/* ────────────────────────────────────────────────
+   RENDER ALERTS
+──────────────────────────────────────────────── */
+function renderAlerts(){
+  const c=document.getElementById('sc-alerts');
+  document.getElementById('noAlts').style.display=alerts.length?'none':'block';
+  // Update badge
+  const b=document.getElementById('abadge');
+  b.style.display=alerts.length?'inline':'none';
+  b.textContent=alerts.length;
+  // Remove old
+  c.querySelectorAll('.aitem').forEach(e=>e.remove());
+  // Add newest first
+  [...alerts].reverse().slice(0,30).forEach(a=>{
+    const d=document.createElement('div');
+    d.className='aitem '+a.sev;
+    const sevLabel = (a.sev || 'info').toUpperCase();
+    const sevClass = a.sev || 'info';
+    d.innerHTML=`<div class="ahead"><div class="atitle"><span class="asev ${sevClass}">${sevLabel}</span>${a.title||''}</div><div class="atime">${a.elapsed||''}</div></div><div class="adesc">${a.desc||''}</div>`;
+    c.appendChild(d);
+  });
+}
+
+/* ────────────────────────────────────────────────
+   REPORT
+──────────────────────────────────────────────── */
+function updateReport(){
+  const s=Math.round(trust);
+  document.getElementById('r-dur').textContent=fmt(secs);
+  document.getElementById('r-trust').textContent=s+'%';
+  document.getElementById('r-alts').textContent=alerts.length;
+  document.getElementById('r-high').textContent=alerts.filter(a=>a.sev==='high').length;
+  document.getElementById('r-gaze').textContent=counts.gaze;
+  document.getElementById('r-multi').textContent=counts.multi;
+  document.getElementById('r-phone').textContent=counts.phone;
+  document.getElementById('r-tab').textContent=counts.tab;
+  // Verdict
+  const vi=document.getElementById('verdIcon'), vt=document.getElementById('verdText');
+  if(s>=75){vi.textContent='✅';vt.textContent='CLEAN — No significant issues';}
+  else if(s>=45){vi.textContent='⚠️';vt.textContent='SUSPICIOUS — Review recommended';}
+  else{vi.textContent='🚨';vt.textContent='HIGH RISK — Likely cheating';}
+  // Modal sync
+  document.getElementById('ms-trust').textContent=s;
+  document.getElementById('ms-alts').textContent=alerts.length;
+  document.getElementById('ms-dur').textContent=fmt(secs);
+}
+
+/* ────────────────────────────────────────────────
+   TIMER
+──────────────────────────────────────────────── */
+function startTimer(){
+  timerInt=setInterval(()=>{
+    secs++;
+    document.getElementById('timerEl').textContent=fmt(secs);
+    updateReport();
+  },1000);
+}
+
+/* ────────────────────────────────────────────────
+   CONTROLS
+──────────────────────────────────────────────── */
+function toggleMic(){
+  micOn=!micOn;
+  if(stream) stream.getAudioTracks().forEach(t=>t.enabled=micOn);
+  document.getElementById('micBtn').textContent=micOn?'🎤 Mute':'🔇 Unmute';
+}
+
+function toggleCam(){
+  camOn=!camOn;
+  if(stream) stream.getVideoTracks().forEach(t=>t.enabled=camOn);
+  document.getElementById('camBtn').textContent=camOn?'📹 Stop Video':'📷 Start Video';
+  if(!camOn) addAlert('noface','📷 Camera Off','Candidate disabled their camera during interview.','high');
+}
+
+/* ────────────────────────────────────────────────
+   TAB SWITCH
+──────────────────────────────────────────────── */
+function stab(id,btn){
+  document.querySelectorAll('.scont').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('sc-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ────────────────────────────────────────────────
+   END + MODAL
+──────────────────────────────────────────────── */
+function endInterview(){
+  clearInterval(timerInt);
+  detectionRunning=false;
+  clearInterval(simInt);
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  updateReport();
+  const s=Math.round(trust);
+  const mb=document.getElementById('mvbox');
+  mb.className='vbox';
+  if(s>=75){mb.classList.add('clean');document.getElementById('mvicon').textContent='✅';document.getElementById('mvtext').textContent='CLEAN — Interview appears authentic';}
+  else if(s>=45){mb.classList.add('suspect');document.getElementById('mvicon').textContent='⚠️';document.getElementById('mvtext').textContent='SUSPICIOUS — Manual review recommended';}
+  else{mb.classList.add('fraud');document.getElementById('mvicon').textContent='🚨';document.getElementById('mvtext').textContent='HIGH RISK — Integrity compromised';}
+  document.getElementById('modal').classList.add('on');
+  // Save report to backend / Firestore
+  saveReportToCloud().catch(console.warn);
+}
+
+async function saveReportToCloud() {
+  const s = Math.round(trust);
+  const verdict = s >= 75 ? 'CLEAN' : s >= 45 ? 'SUSPICIOUS' : 'HIGH RISK';
+  const mid = document.getElementById('midDisplay').textContent;
+  try {
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meetingId: mid,
+        report: {
+          trustScore: s, verdict, duration: fmt(secs),
+          alertCount: alerts.length,
+          highCount: alerts.filter(a => a.sev === 'high').length,
+          counts, alerts,
+          interviewerName: role === 'interviewer' ? userName : '',
+          candidateName:   role === 'candidate'   ? userName : '',
+        }
+      })
+    });
+    const data = await res.json();
+    if (data.reportId) console.log('[campro] Report saved to cloud ✅ id:', data.reportId);
+  } catch (e) { console.warn('[Report] Cloud save failed:', e); }
+}
+
+/* ────────────────────────────────────────────────
+   EXPORT
+──────────────────────────────────────────────── */
+function exportReport(){
+  const s=Math.round(trust);
+  const verdict=s>=75?'CLEAN':s>=45?'SUSPICIOUS':'HIGH RISK';
+  const lines=[
+    '================================================',
+    '   campro — Interview Integrity Report',
+    '================================================',
+    `Date          : ${new Date().toLocaleString()}`,
+    `Meeting ID    : ${document.getElementById('midDisplay').textContent}`,
+    `Duration      : ${fmt(secs)}`,
+    `Final Trust   : ${s}/100`,
+    `Verdict       : ${verdict}`,
+    '',
+    '--- Detection Counts ---',
+    `Gaze Events   : ${counts.gaze}`,
+    `Multi-Face    : ${counts.multi}`,
+    `Device Detect : ${counts.phone}`,
+    `Face Absent   : ${counts.noface}`,
+    `Multi-Voice   : ${counts.voice}`,
+    `Tab Switches  : ${counts.tab}`,
+    '',
+    '--- Alert Log ---',
+    ...alerts.map(a=>`[${a.elapsed}] [${a.sev.toUpperCase()}] ${a.title}\n           ${a.desc}`),
+    '',
+    '================================================',
+    'Generated by campro AI Interview Monitor',
+    '================================================'
+  ];
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url;
+  a.download=`campro_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ────────────────────────────────────────────────
+   UTILS
+──────────────────────────────────────────────── */
+function fmt(s){return `${pad(Math.floor(s/60))}:${pad(s%60)}`;}
+function pad(n){return String(n).padStart(2,'0');}
+/* ── STRICT RESTRICTION MODE ── */
+let strictModeActive = false;
+let strictViolations = 0;
+let violationToastTimeout = null;
+
+function toggleStrictMode() {
+  if (!strictModeActive) enableStrictMode();
+  else {
+  if (role !== 'interviewer') {
+    flagViolation('🚫 Unauthorized Disable Attempt', 'Candidate attempted to disable strict mode.');
+    return;
+  }
+  disableStrictMode();
+}
+}
+
+function enableStrictMode() {
+  strictModeActive = true;
+
+  // ✅ ADD THIS (only interviewer should send signal)
+  if (role && role.toLowerCase() === 'interviewer' && sessionRef)  {
+    sessionRef.child('strictMode').set(true);
+  }
+
+ 
+
+  if (role === 'candidate') addAlert('strictOn', 'Strict Mode Enabled', 'Interviewer activated exam lockdown.', 'medium');
+
+  // Force fullscreen — only on user gesture (interviewer click), not remote trigger
+  if (role === 'interviewer') {
+    const el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  }
+
+  // Update the button look
+  document.getElementById('strictBtn').textContent = '🔓 Exit Strict Mode';
+  document.getElementById('strictBtn').classList.add('active');
+  document.getElementById('examBadge').classList.add('on');
+
+  // Attach all restriction listeners
+  document.addEventListener('keydown', blockKeys, true);
+  document.addEventListener('contextmenu', blockContextMenu, true);
+  document.addEventListener('copy', blockClipboard, true);
+  document.addEventListener('paste', blockClipboard, true);
+  document.addEventListener('cut', blockClipboard, true);
+  window.addEventListener('blur', onWindowBlur);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+  // Disable text selection
+  document.body.style.userSelect = 'none';
+  document.body.style.webkitUserSelect = 'none';
+
+  showViolationToast('🔒 STRICT MODE ENABLED — This tab is now locked', 3000, '#10b981');
+  addAlert('strictOn', '🔒 Strict Mode Activated', 'Exam lockdown enabled. All shortcuts, tab switches, and fullscreen exits are now flagged.', 'medium');
+
+  // Show visual indicators for candidate
+  if (role === 'candidate') {
+    // Show red border overlay
+    document.getElementById('strictOverlay').classList.add('on');
+    // Show or create a candidate-visible strict mode banner
+    let candBanner = document.getElementById('candStrictBanner');
+    if (!candBanner) {
+      candBanner = document.createElement('div');
+      candBanner.id = 'candStrictBanner';
+      candBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#ef4444;color:#fff;text-align:center;padding:8px;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:.5px;animation:strictPulse 2s infinite;';
+      candBanner.textContent = '🔒 STRICT MODE ACTIVE — This session is being monitored';
+      document.body.appendChild(candBanner);
+    }
+    candBanner.style.display = 'block';
+  }
+}
+
+function disableStrictMode() {
+  strictModeActive = false;
+  // ✅ ADD THIS
+  if (role === 'interviewer' && sessionRef) {
+    sessionRef.child('strictMode').set(false);
+  }
+
+  try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch(e) {}
+
+  if (role === 'candidate') addAlert('strictOff', 'Strict Mode Disabled', 'Interviewer deactivated exam lockdown.', 'low');
+  // Exit fullscreen
+  if (document.exitFullscreen) document.exitFullscreen();
+  else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+
+  // Reset button look
+  document.getElementById('strictBtn').textContent = '🔒 Strict Mode';
+  document.getElementById('strictBtn').classList.remove('active');
+  document.getElementById('examBadge').classList.remove('on');
+  document.getElementById('fsWarnBanner').classList.remove('on');
+
+  // Remove all restriction listeners
+  document.removeEventListener('keydown', blockKeys, true);
+  document.removeEventListener('contextmenu', blockContextMenu, true);
+  document.removeEventListener('copy', blockClipboard, true);
+  document.removeEventListener('paste', blockClipboard, true);
+  document.removeEventListener('cut', blockClipboard, true);
+  window.removeEventListener('blur', onWindowBlur);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
+  document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+
+  // Re-enable text selection
+  document.body.style.userSelect = '';
+  document.body.style.webkitUserSelect = '';
+
+  showViolationToast('🔓 Strict Mode Disabled', 2500, '#64748b');
+
+  // Hide candidate visual indicators
+  if (role === 'candidate') {
+    document.getElementById('strictOverlay').classList.remove('on');
+    const candBanner = document.getElementById('candStrictBanner');
+    if (candBanner) candBanner.style.display = 'none';
+  }
+}
+
+function blockKeys(e) {
+  if (!strictModeActive) return;
+  const blocked =
+    e.key === 'F1' || e.key === 'F2' || e.key === 'F3' || e.key === 'F4' ||
+    e.key === 'F5' || e.key === 'F6' || e.key === 'F7' || e.key === 'F8' ||
+    e.key === 'F9' || e.key === 'F10' || e.key === 'F11' || e.key === 'F12' ||
+    e.key === 'Meta' || e.key === 'OS' ||
+    (e.altKey && e.key === 'Tab') ||
+    (e.altKey && e.key === 'F4') ||
+    (e.ctrlKey && e.key === 'w') ||
+    (e.ctrlKey && e.key === 't') ||
+    (e.ctrlKey && e.key === 'n') ||
+    (e.ctrlKey && e.key === 'Tab') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'Tab') ||
+    (e.ctrlKey && e.key === 'l') ||
+    (e.ctrlKey && e.key === 'r') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+    (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+    e.key === 'Escape';
+
+  if (blocked) {
+    e.preventDefault();
+    e.stopPropagation();
+    flagViolation('⌨️ Blocked Shortcut', `Blocked key: ${e.altKey?'Alt+':''}${e.ctrlKey?'Ctrl+':''}${e.shiftKey?'Shift+':''}${e.metaKey?'Meta+':''}${e.key}`);
+  }
+}
+
+function blockContextMenu(e) {
+  if (!strictModeActive) return;
+  e.preventDefault();
+  flagViolation('🖱️ Right-Click Blocked', 'Right-click is disabled during exam lockdown.');
+}
+
+function blockClipboard(e) {
+  if (!strictModeActive) return;
+  e.preventDefault();
+  flagViolation('📋 Clipboard Blocked', `${e.type} action is disabled during exam lockdown.`);
+}
+
+function onWindowBlur() {
+  if (!strictModeActive) return;
+  flagViolation('🚨 Window Focus Lost', 'Candidate switched to another application or window.');
+  setTimeout(() => { try { window.focus(); } catch(e){} }, 300);
+}
+
+function onFullscreenChange() {
+  if (!strictModeActive) return;
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!isFs) {
+    document.getElementById('fsWarnBanner').classList.add('on');
+    flagViolation('⛶ Fullscreen Exited', 'Candidate exited fullscreen mode during exam lockdown.');
+    // REPLACE WITH THIS:
+setTimeout(() => { if (strictModeActive) reenterFullscreen(); }, 100);
+  } else {
+    document.getElementById('fsWarnBanner').classList.remove('on');
+  }
+}
+
+function reenterFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  document.getElementById('fsWarnBanner').classList.remove('on');
+}
+
+function flagViolation(title, desc) {
+  strictViolations++;
+  const overlay = document.getElementById('strictOverlay');
+  overlay.classList.add('on');
+  setTimeout(() => overlay.classList.remove('on'), 700);
+  showViolationToast(`🚨 VIOLATION #${strictViolations} — ${title}`, 3500);
+  addAlert('strict_' + Date.now(), title, desc, 'high');
+  trust = Math.max(0, trust - 4);
+  updateReport();
+  // Sync trust to Firebase after strict violation
+  if (role === 'candidate') syncTrustToFirebase();
+}
+
+function showViolationToast(msg, duration = 3000, color = '#ef4444') {
+  const toast = document.getElementById('violationToast');
+  if (violationToastTimeout) clearTimeout(violationToastTimeout);
+  toast.textContent = msg;
+  toast.style.background = color;
+  toast.classList.add('show');
+  violationToastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
+}
+</script>
+</body>
+</html>

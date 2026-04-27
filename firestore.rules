@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Sessions — readable/writable by anyone with the meeting ID
+    match /sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    // Reports — readable/writable (lock down once auth is added)
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+  }
+}

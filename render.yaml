@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: campro
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Add these in Render dashboard → Environment tab:
+      # AGORA_APP_ID, AGORA_APP_CERTIFICATE
+      # FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_DATABASE_URL
+      # FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET
+      # FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID
+      # FIREBASE_SERVICE_ACCOUNT
