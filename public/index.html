@@ -103,8 +103,8 @@ body {
 
 /* sidebar */
 .sidebar{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
-.stab{flex:0 0 auto;min-width:60px;padding:12px 8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;background:none;border:none;color:var(--muted);font-family:var(--mono);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.stab{flex:1;padding:10px 4px;font-size:10px;font-weight:600;text-align:center;cursor:pointer;background:none;border:none;color:var(--muted);font-family:var(--mono);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;letter-spacing:-.2px;}
 .stab.on{color:var(--accent);border-bottom-color:var(--accent);}
 .scont{display:none;flex:1;overflow-y:auto;flex-direction:column;padding:14px;gap:12px;}
 .scont.on{display:flex;}
@@ -336,10 +336,10 @@ body {
     <!-- sidebar -->
     <div class="sidebar">
       <div class="stabs">
-        <button class="stab on" onclick="stab('analysis',this)">ANALYSIS</button>
-        <button class="stab" onclick="stab('alerts',this)">ALERTS <span id="abadge" style="background:var(--danger);border-radius:8px;padding:0 4px;font-size:9px;display:none;"></span></button>
-        <button class="stab" onclick="stab('report',this)">REPORT</button>
-        <button class="stab" onclick="stab('gemini',this)" style="color:#4285f4;">✨ AI</button>
+        <button class="stab on" onclick="stab('analysis',this)">👁 LIVE</button>
+        <button class="stab" onclick="stab('alerts',this)">🚨 <span id="abadge" style="background:var(--danger);border-radius:8px;padding:0 4px;font-size:9px;display:none;"></span>ALERTS</button>
+        <button class="stab" onclick="stab('report',this)">📋 RPT</button>
+        <button class="stab" onclick="stab('gemini',this)" style="color:#4285f4;font-weight:800;">✨ AI</button>
       </div>
 
       <!-- analysis -->
