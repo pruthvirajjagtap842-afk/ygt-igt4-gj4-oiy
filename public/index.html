@@ -930,6 +930,97 @@ if (role === 'candidate') {
   setInterval(runDetection, 200);
   startTabDetection();
   startSpeechRecognition();
+  <!-- Add this in the <script> section of index.html -->
+
+// ── GEMINI AI FUNCTIONS ──────────────────────────────────────
+function openGeminiModal() {
+  document.getElementById('geminiModal').classList.add('on');
+}
+
+function closeGeminiModal() {
+  document.getElementById('geminiModal').classList.remove('on');
+}
+
+async function generateQuestions() {
+  const role = document.getElementById('gemRoleInp').value || 'Software Engineer';
+  const level = document.getElementById('gemLevelSel').value || 'Mid';
+  const count = document.getElementById('gemCountSel').value || '5';
+  
+  const btn = document.getElementById('gemQBtn');
+  btn.disabled = true;
+  btn.textContent = '✨ Generating…';
+  
+  try {
+    const res = await fetch('/api/gemini/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, level, count: parseInt(count) })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to generate questions');
+    
+    const output = document.getElementById('gemQOutput');
+    const list = document.getElementById('gemQList');
+    list.innerHTML = '';
+    
+    data.questions.forEach(q => {
+      const item = document.createElement('div');
+      item.className = 'gm-qitem';
+      item.innerHTML = `
+        <div class="gm-qtype">${q.type}</div>
+        <div class="gm-qtext">${q.question}</div>
+        <div class="gm-qwhy">💡 ${q.why}</div>
+      `;
+      list.appendChild(item);
+    });
+    
+    output.style.display = 'block';
+  } catch (err) {
+    alert('Error: ' + err.message);
+    console.error('[Gemini] Generate error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Generate with Gemini';
+  }
+}
+
+async function generateGeminiAnalysis() {
+  if (!alerts || alerts.length === 0) {
+    console.warn('[Gemini] No alerts to analyze yet');
+    return;
+  }
+  
+  const analysisSection = document.getElementById('gemAnalysisSection');
+  const analysisWrap = document.getElementById('gemAnalysisWrap');
+  
+  analysisSection.style.display = 'block';
+  analysisWrap.textContent = '⏳ Analyzing integrity report…';
+  
+  try {
+    const res = await fetch('/api/gemini/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trustScore: Math.round(trust),
+        alerts: alerts,
+        duration: formatTime(secs),
+        counts: counts,
+        verdict: getVerdict(),
+        candidateName: role === 'candidate' ? userName : '',
+        role: role === 'interviewer' ? '' : ''
+      })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to analyze');
+    
+    analysisWrap.textContent = data.analysis;
+  } catch (err) {
+    analysisWrap.textContent = '❌ Analysis failed: ' + err.message;
+    console.error('[Gemini] Analyze error:', err);
+  }
+}
 };
   drawGazeCanvas();
   updateReport();
