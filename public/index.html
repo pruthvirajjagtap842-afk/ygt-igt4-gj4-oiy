@@ -396,7 +396,7 @@ body {
         <button class="stab on" onclick="stab('analysis',this)">👁 LIVE</button>
         <button class="stab" onclick="stab('alerts',this)">🚨 <span id="abadge" style="background:var(--danger);border-radius:8px;padding:0 4px;font-size:9px;display:none;"></span>ALERTS</button>
         <button class="stab" onclick="stab('report',this)">📋 RPT</button>
-        <button class="stab" onclick="stab('gemini',this)" style="color:#4285f4;font-weight:800;">✨ AI</button>
+
       </div>
 
       <!-- analysis -->
@@ -476,39 +476,7 @@ body {
         <button class="exp-btn" onclick="exportReport()">📄 Export Report</button>
       </div>
 
-      <!-- gemini ai panel -->
-      <div class="scont" id="sc-gemini">
-        <!-- Question Generator -->
-        <div>
-          <div class="stitle" style="color:#4285f4;">✨ AI Question Generator</div>
-          <div class="rcard" style="gap:10px;display:flex;flex-direction:column;">
-            <input id="gemRoleInp" class="inp" placeholder="Job role (e.g. Backend Engineer)" style="margin:0;font-size:12px;padding:8px 12px;" />
-            <select id="gemLevelSel" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:12px;font-family:var(--mono);">
-              <option value="Junior">Junior</option>
-              <option value="Mid" selected>Mid</option>
-              <option value="Senior">Senior</option>
-            </select>
-            <select id="gemCountSel" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:12px;font-family:var(--mono);">
-              <option value="3">3 Questions</option>
-              <option value="5" selected>5 Questions</option>
-              <option value="8">8 Questions</option>
-            </select>
-            <button onclick="generateQuestions()" id="gemQBtn" style="background:linear-gradient(135deg,#4285f4,#0f9d58);border:none;border-radius:8px;color:#fff;padding:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--mono);">✨ Generate with Gemini</button>
-          </div>
-        </div>
-        <div id="gemQOutput" style="display:none;">
-          <div class="stitle">Generated Questions</div>
-          <div id="gemQList" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
 
-        <!-- AI Integrity Analysis -->
-        <div style="margin-top:8px;">
-          <div class="stitle" style="color:#4285f4;">🔍 AI Integrity Analysis</div>
-          <div class="rcard" style="font-size:12px;color:var(--muted);text-align:center;" id="gemAnalysisWrap">
-            <div style="font-size:22px;margin-bottom:6px;">🤖</div>
-            End the interview to generate<br>an AI-powered integrity report
-          </div>
-        </div>
       </div>
     </div>
   </div>
