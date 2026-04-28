@@ -103,8 +103,8 @@ body {
 
 /* sidebar */
 .sidebar{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.stab{flex:1;padding:12px 6px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;background:none;border:none;color:var(--muted);font-family:var(--mono);border-bottom:2px solid transparent;transition:all .2s;}
+.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.stab{flex:0 0 auto;min-width:60px;padding:12px 8px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;background:none;border:none;color:var(--muted);font-family:var(--mono);border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
 .stab.on{color:var(--accent);border-bottom-color:var(--accent);}
 .scont{display:none;flex:1;overflow-y:auto;flex-direction:column;padding:14px;gap:12px;}
 .scont.on{display:flex;}
