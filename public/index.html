@@ -211,6 +211,24 @@ body {
 
 #fsWarnBanner{display:none;position:fixed;top:0;left:0;right:0;background:var(--danger);color:#fff;text-align:center;padding:10px;font-family:var(--mono);font-size:12px;font-weight:700;z-index:10000;letter-spacing:.5px;}
 #fsWarnBanner.on{display:block;}
+/* Floating Gemini Button */
+#geminiFloatBtn{position:fixed;bottom:80px;right:16px;z-index:50;background:linear-gradient(135deg,#4285f4,#0f9d58);border:none;border-radius:50px;color:#fff;padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(66,133,244,.5);font-family:monospace;display:none;align-items:center;gap:6px;}
+#geminiFloatBtn:hover{opacity:.9;}
+#geminiModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;}
+#geminiModal.on{display:flex;}
+.gm-card{background:#111420;border:1px solid #1e2336;border-radius:16px;padding:28px;width:500px;max-width:95vw;max-height:85vh;overflow-y:auto;position:relative;}
+.gm-close{position:absolute;top:14px;right:18px;background:none;border:none;color:#5a6380;font-size:1.4rem;cursor:pointer;}
+.gm-title{font-size:1rem;color:#4285f4;font-family:monospace;margin-bottom:20px;letter-spacing:.05em;}
+.gm-section{margin-bottom:20px;}
+.gm-label{font-size:11px;color:#5a6380;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-family:monospace;}
+.gm-inp{width:100%;background:#0a0c12;border:1px solid #1e2336;border-radius:8px;color:#e2e6f0;padding:9px 13px;font-size:13px;font-family:monospace;box-sizing:border-box;}
+.gm-sel{width:100%;background:#0a0c12;border:1px solid #1e2336;border-radius:8px;color:#e2e6f0;padding:9px 13px;font-size:13px;font-family:monospace;margin-bottom:8px;}
+.gm-btn{width:100%;background:linear-gradient(135deg,#4285f4,#0f9d58);border:none;border-radius:8px;color:#fff;padding:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:monospace;margin-top:4px;}
+.gm-qitem{background:#161926;border:1px solid #1e2336;border-radius:8px;padding:12px 14px;margin-bottom:8px;}
+.gm-qtype{font-size:9px;font-family:monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.gm-qtext{font-size:13px;color:#e2e6f0;line-height:1.5;margin-bottom:6px;}
+.gm-qwhy{font-size:11px;color:#5a6380;font-style:italic;}
+.gm-analysis{background:#0a1628;border:1px solid rgba(66,133,244,.3);border-radius:10px;padding:16px;font-size:13px;color:#e2e6f0;line-height:1.7;white-space:pre-wrap;font-family:monospace;}
 </style>
 </head>
 <body style="overflow-y: auto;">
@@ -272,6 +290,45 @@ body {
 </div>
 
 <!-- ADD THESE 3 LINES right after the closing </div> of the topbar: -->
+<!-- Floating Gemini Button (interviewer only) -->
+<button id="geminiFloatBtn" onclick="openGeminiModal()">✨ AI Assistant</button>
+
+<!-- Gemini Modal -->
+<div id="geminiModal">
+  <div class="gm-card">
+    <button class="gm-close" onclick="closeGeminiModal()">✕</button>
+    <div class="gm-title">✨ GEMINI AI ASSISTANT</div>
+
+    <!-- Question Generator -->
+    <div class="gm-section">
+      <div class="gm-label">AI Question Generator</div>
+      <input class="gm-inp" id="gemRoleInp" placeholder="Job role (e.g. Backend Engineer)" style="margin-bottom:8px;" />
+      <select class="gm-sel" id="gemLevelSel">
+        <option value="Junior">Junior</option>
+        <option value="Mid" selected>Mid Level</option>
+        <option value="Senior">Senior</option>
+      </select>
+      <select class="gm-sel" id="gemCountSel">
+        <option value="3">3 Questions</option>
+        <option value="5" selected>5 Questions</option>
+        <option value="8">8 Questions</option>
+      </select>
+      <button class="gm-btn" id="gemQBtn" onclick="generateQuestions()">✨ Generate with Gemini</button>
+    </div>
+
+    <div id="gemQOutput" style="display:none;">
+      <div class="gm-label">Generated Questions</div>
+      <div id="gemQList"></div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="gm-section" id="gemAnalysisSection" style="display:none;">
+      <div class="gm-label">🔍 AI Integrity Analysis</div>
+      <div class="gm-analysis" id="gemAnalysisWrap">Analysis will appear here after the interview ends.</div>
+    </div>
+  </div>
+</div>
+
 <div id="strictOverlay"></div>
 <div id="violationToast"></div>
 <div id="fsWarnBanner">⚠️ FULLSCREEN REQUIRED — Return to fullscreen immediately or this will be flagged &nbsp;<button onclick="reenterFullscreen()" style="margin-left:12px;background:#fff;color:#ef4444;border:none;border-radius:5px;padding:3px 10px;font-weight:700;cursor:pointer;font-family:monospace;font-size:11px;">↩ Restore Fullscreen</button></div>
@@ -823,6 +880,10 @@ function setRole(r) {
 }
 
 function applyRoleUI() {
+  if (role === 'interviewer') {
+    const fb = document.getElementById('geminiFloatBtn');
+    if (fb) fb.style.display = 'flex';
+  }
   if (role === 'candidate') {
     document.querySelector('.sidebar').style.display = 'none';
     document.querySelector('.status-strip').style.display = 'none';
@@ -2427,6 +2488,17 @@ function showViolationToast(msg, duration = 3000, color = '#ef4444') {
    GEMINI AI FEATURES
 ──────────────────────────────────────────────── */
 
+function openGeminiModal() {
+  document.getElementById('geminiModal').classList.add('on');
+}
+function closeGeminiModal() {
+  document.getElementById('geminiModal').classList.remove('on');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const gm = document.getElementById('geminiModal');
+  if (gm) gm.addEventListener('click', e => { if (e.target === gm) closeGeminiModal(); });
+});
+
 async function generateQuestions() {
   const role  = document.getElementById('gemRoleInp').value.trim() || 'Software Engineer';
   const level = document.getElementById('gemLevelSel').value;
@@ -2449,7 +2521,7 @@ async function generateQuestions() {
     if (data.error) throw new Error(data.error);
 
     list.innerHTML = data.questions.map((q, i) => `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+      <div class="gm-qitem">
         <div style="font-size:9px;font-family:var(--mono);color:${q.type==='technical'?'#4285f4':q.type==='behavioral'?'#0f9d58':'#f4b400'};text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">
           ${q.type || 'question'}
         </div>
@@ -2496,11 +2568,9 @@ async function runGeminiAnalysis() {
 
     if (data.error) throw new Error(data.error);
 
-    wrap.innerHTML = `
-      <div style="font-size:10px;font-family:var(--mono);color:#4285f4;margin-bottom:8px;letter-spacing:.08em;">✨ GEMINI AI ANALYSIS</div>
-      <div style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap;text-align:left;">${data.analysis}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:10px;font-family:var(--mono);">Generated by ${data.model} · ${new Date(data.generatedAt).toLocaleTimeString()}</div>
-    `;
+    wrap.textContent = data.analysis;
+    const sec = document.getElementById('gemAnalysisSection');
+    if (sec) sec.style.display = 'block';
 
     // Also inject into report modal
     const modalAI = document.getElementById('modalGeminiAnalysis');
