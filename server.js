@@ -236,6 +236,93 @@ app.get('/api/reports', async (req, res) => {
   }
 });
 
+
+// ── Google Gemini AI ──────────────────────────────────────────
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+let geminiModel = null;
+function getGemini() {
+  if (!process.env.GEMINI_API_KEY) return null;
+  if (!geminiModel) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  }
+  return geminiModel;
+}
+
+// ── Gemini: Generate interview questions ──────────────────────
+// POST /api/gemini/questions  { role, level, count }
+app.post('/api/gemini/questions', async (req, res) => {
+  const { role = 'Software Engineer', level = 'Mid', count = 5 } = req.body;
+  const model = getGemini();
+  if (!model) return res.status(503).json({ error: 'Gemini API key not configured' });
+
+  const prompt = `You are an expert technical interviewer. Generate ${count} interview questions for a ${level}-level ${role} position.
+
+Rules:
+- Mix behavioral, technical, and situational questions
+- Make them specific and thought-provoking
+- Each question should reveal something meaningful about the candidate
+- Return ONLY a valid JSON array of objects with keys: "question" (string), "type" (string: "technical"|"behavioral"|"situational"), "why" (string: one sentence on what it reveals)
+- No markdown, no explanation, just the JSON array`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().replace(/```json|```/g, '').trim();
+    const questions = JSON.parse(text);
+    res.json({ questions, role, level });
+  } catch (err) {
+    console.error('[Gemini] Questions error:', err.message);
+    res.status(500).json({ error: 'Failed to generate questions' });
+  }
+});
+
+// ── Gemini: AI Integrity Analysis of interview report ─────────
+// POST /api/gemini/analyze  { trustScore, alerts, duration, counts, verdict }
+app.post('/api/gemini/analyze', async (req, res) => {
+  const { trustScore, alerts = [], duration, counts = {}, verdict, candidateName, role: jobRole } = req.body;
+  const model = getGemini();
+  if (!model) return res.status(503).json({ error: 'Gemini API key not configured' });
+
+  const alertSummary = alerts.length
+    ? alerts.slice(0, 10).map(a => `- [${(a.sev||'').toUpperCase()}] ${a.msg || a.title}: ${a.desc||''}`).join('\n')
+    : 'No alerts recorded.';
+
+  const prompt = `You are an AI interview integrity analyst. Analyze this proctoring session report and provide a professional assessment.
+
+Session Data:
+- Candidate: ${candidateName || 'Unknown'}
+- Job Role: ${jobRole || 'Not specified'}
+- Trust Score: ${trustScore}/100
+- Verdict: ${verdict}
+- Duration: ${duration}
+- Gaze Drift Events: ${counts.gaze || 0}
+- Multiple Face Events: ${counts.multi || 0}
+- Tab Switch Events: ${counts.tab || 0}
+- No Face Events: ${counts.noface || 0}
+- Multi Voice Events: ${counts.voice || 0}
+
+Alert Log:
+${alertSummary}
+
+Write a professional integrity report with:
+1. Overall Assessment (2-3 sentences)
+2. Key Risk Factors (bullet points, only if any)
+3. Recommendation (one clear recommendation: Proceed / Review Further / Reject)
+4. Confidence Level (High/Medium/Low) with reason
+
+Keep it concise, professional, and objective. Plain text only, no markdown symbols.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const analysis = result.response.text();
+    res.json({ analysis, model: 'gemini-1.5-flash', generatedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[Gemini] Analyze error:', err.message);
+    res.status(500).json({ error: 'Failed to generate analysis' });
+  }
+});
+
 // ── SPA fallback ─────────────────────────────────────────────
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

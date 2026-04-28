@@ -339,6 +339,7 @@ body {
         <button class="stab on" onclick="stab('analysis',this)">ANALYSIS</button>
         <button class="stab" onclick="stab('alerts',this)">ALERTS <span id="abadge" style="background:var(--danger);border-radius:8px;padding:0 4px;font-size:9px;display:none;"></span></button>
         <button class="stab" onclick="stab('report',this)">REPORT</button>
+        <button class="stab" onclick="stab('gemini',this)" style="color:#4285f4;">✨ AI</button>
       </div>
 
       <!-- analysis -->
@@ -417,6 +418,41 @@ body {
         </div>
         <button class="exp-btn" onclick="exportReport()">📄 Export Report</button>
       </div>
+
+      <!-- gemini ai panel -->
+      <div class="scont" id="sc-gemini">
+        <!-- Question Generator -->
+        <div>
+          <div class="stitle" style="color:#4285f4;">✨ AI Question Generator</div>
+          <div class="rcard" style="gap:10px;display:flex;flex-direction:column;">
+            <input id="gemRoleInp" class="inp" placeholder="Job role (e.g. Backend Engineer)" style="margin:0;font-size:12px;padding:8px 12px;" />
+            <select id="gemLevelSel" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:12px;font-family:var(--mono);">
+              <option value="Junior">Junior</option>
+              <option value="Mid" selected>Mid</option>
+              <option value="Senior">Senior</option>
+            </select>
+            <select id="gemCountSel" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:12px;font-family:var(--mono);">
+              <option value="3">3 Questions</option>
+              <option value="5" selected>5 Questions</option>
+              <option value="8">8 Questions</option>
+            </select>
+            <button onclick="generateQuestions()" id="gemQBtn" style="background:linear-gradient(135deg,#4285f4,#0f9d58);border:none;border-radius:8px;color:#fff;padding:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:var(--mono);">✨ Generate with Gemini</button>
+          </div>
+        </div>
+        <div id="gemQOutput" style="display:none;">
+          <div class="stitle">Generated Questions</div>
+          <div id="gemQList" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <!-- AI Integrity Analysis -->
+        <div style="margin-top:8px;">
+          <div class="stitle" style="color:#4285f4;">🔍 AI Integrity Analysis</div>
+          <div class="rcard" style="font-size:12px;color:var(--muted);text-align:center;" id="gemAnalysisWrap">
+            <div style="font-size:22px;margin-bottom:6px;">🤖</div>
+            End the interview to generate<br>an AI-powered integrity report
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -434,6 +470,12 @@ body {
       <div class="mstat"><div class="mstat-v" id="ms-trust">100</div><div class="mstat-l">Trust Score</div></div>
       <div class="mstat"><div class="mstat-v" id="ms-alts">0</div><div class="mstat-l">Alerts</div></div>
       <div class="mstat"><div class="mstat-v" id="ms-dur">00:00</div><div class="mstat-l">Duration</div></div>
+    </div>
+    <div id="modalGeminiWrap" style="display:none;background:rgba(66,133,244,.07);border:1px solid rgba(66,133,244,.25);border-radius:10px;padding:14px;margin:4px 0;text-align:left;">
+      <div style="font-size:10px;font-family:monospace;color:#4285f4;margin-bottom:8px;letter-spacing:.08em;">✨ GEMINI AI INTEGRITY ANALYSIS</div>
+      <div id="modalGeminiAnalysis" style="font-size:12px;color:#e2e6f0;line-height:1.6;">
+        <div style="color:#5a6380;font-size:12px;">Generating analysis…</div>
+      </div>
     </div>
     <div class="mbtns">
       <button class="mbtn primary" onclick="exportReport()">📄 Export</button>
@@ -2103,6 +2145,8 @@ function endInterview(){
   document.getElementById('modal').classList.add('on');
   // Save report to backend / Firestore
   saveReportToCloud().catch(console.warn);
+  // Run Gemini AI analysis automatically
+  if (role === 'interviewer') runGeminiAnalysis();
 }
 
 async function saveReportToCloud() {
@@ -2378,6 +2422,97 @@ function showViolationToast(msg, duration = 3000, color = '#ef4444') {
   toast.classList.add('show');
   violationToastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
 }
+
+/* ────────────────────────────────────────────────
+   GEMINI AI FEATURES
+──────────────────────────────────────────────── */
+
+async function generateQuestions() {
+  const role  = document.getElementById('gemRoleInp').value.trim() || 'Software Engineer';
+  const level = document.getElementById('gemLevelSel').value;
+  const count = document.getElementById('gemCountSel').value;
+  const btn   = document.getElementById('gemQBtn');
+  const out   = document.getElementById('gemQOutput');
+  const list  = document.getElementById('gemQList');
+
+  btn.textContent = '⏳ Generating…';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/gemini/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, level, count: Number(count) })
+    });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    list.innerHTML = data.questions.map((q, i) => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:9px;font-family:var(--mono);color:${q.type==='technical'?'#4285f4':q.type==='behavioral'?'#0f9d58':'#f4b400'};text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;">
+          ${q.type || 'question'}
+        </div>
+        <div style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:6px;font-weight:500;">
+          ${i+1}. ${q.question}
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-style:italic;">
+          💡 ${q.why || ''}
+        </div>
+      </div>
+    `).join('');
+
+    out.style.display = 'block';
+    showViolationToast('✨ Gemini generated ' + data.questions.length + ' questions!', 2500, '#4285f4');
+  } catch(e) {
+    showViolationToast('❌ Gemini error: ' + e.message, 3000, '#ef4444');
+  } finally {
+    btn.textContent = '✨ Generate with Gemini';
+    btn.disabled = false;
+  }
+}
+
+async function runGeminiAnalysis() {
+  const wrap = document.getElementById('gemAnalysisWrap');
+  if (!wrap) return;
+
+  wrap.innerHTML = '<div style="font-size:22px;margin-bottom:8px;">⏳</div><div style="font-size:12px;color:var(--muted);">Gemini is analyzing the session…</div>';
+
+  const score   = Math.round(trust);
+  const verdict = score >= 75 ? 'CLEAN' : score >= 45 ? 'SUSPICIOUS' : 'HIGH RISK';
+
+  try {
+    const res = await fetch('/api/gemini/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trustScore: score, verdict, duration: fmt(secs),
+        alerts: alerts.slice(0, 15), counts,
+        candidateName: role === 'interviewer' ? '' : userName,
+        role: document.getElementById('gemRoleInp')?.value || ''
+      })
+    });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    wrap.innerHTML = `
+      <div style="font-size:10px;font-family:var(--mono);color:#4285f4;margin-bottom:8px;letter-spacing:.08em;">✨ GEMINI AI ANALYSIS</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap;text-align:left;">${data.analysis}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:10px;font-family:var(--mono);">Generated by ${data.model} · ${new Date(data.generatedAt).toLocaleTimeString()}</div>
+    `;
+
+    // Also inject into report modal
+    const modalAI = document.getElementById('modalGeminiAnalysis');
+    if (modalAI) {
+      modalAI.innerHTML = `<div style="font-size:11px;color:var(--text);white-space:pre-wrap;line-height:1.6;text-align:left;">${data.analysis}</div>`;
+      modalAI.parentElement.style.display = 'block';
+    }
+  } catch(e) {
+    wrap.innerHTML = `<div style="font-size:12px;color:#ef4444;">❌ ${e.message}</div>`;
+  }
+}
+
 </script>
 </body>
 </html>
