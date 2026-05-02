@@ -1255,66 +1255,6 @@ async function startFaceDetection(video) {
   loop();
 }
 
-function drawFaceOverlay(ctx, detection, canvas) {
-  const lm = detection.landmarks;
-  const box = detection.detection.box;
-  const W = canvas.width, H = canvas.height;
-
-  // Bounding box
-  const isAlert = gazeOffStreak > 10;
-  ctx.strokeStyle = isAlert ? 'rgba(239,68,68,0.75)' : 'rgba(16,185,129,0.6)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(box.x, box.y, box.width, box.height, 8);
-  ctx.stroke();
-
-  // Corner accents
-  const drawCorner = (x,y,dx,dy) => {
-    ctx.beginPath();
-    ctx.moveTo(x+dx*16,y); ctx.lineTo(x,y); ctx.lineTo(x,y+dy*16);
-    ctx.stroke();
-  };
-  ctx.lineWidth=2.5; ctx.strokeStyle=isAlert?'#ef4444':'#10b981';
-  drawCorner(box.x,box.y,1,1);
-  drawCorner(box.x+box.width,box.y,-1,1);
-  drawCorner(box.x,box.y+box.height,1,-1);
-  drawCorner(box.x+box.width,box.y+box.height,-1,-1);
-
-  // Eye landmarks
-  const drawPts = (pts,color) => {
-    ctx.beginPath();
-    pts.forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.closePath();
-    ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.globalAlpha=.8; ctx.stroke(); ctx.globalAlpha=1;
-  };
-
-  try {
-    const le = lm.getLeftEye();
-    const re = lm.getRightEye();
-    drawPts(le, '#00d4ff');
-    drawPts(re, '#00d4ff');
-
-    // Eye center dots
-    const eyeCenterX = (le.reduce((s,p)=>s+p.x,0)/le.length + re.reduce((s,p)=>s+p.x,0)/re.length)/2;
-    const eyeCenterY = (le.reduce((s,p)=>s+p.y,0)/le.length + re.reduce((s,p)=>s+p.y,0)/re.length)/2;
-    ctx.beginPath(); ctx.arc(eyeCenterX,eyeCenterY,3,0,Math.PI*2);
-    ctx.fillStyle='rgba(0,212,255,0.9)'; ctx.fill();
-
-    // Nose
-    const nose = lm.getNose();
-    ctx.beginPath(); ctx.arc(nose[3].x,nose[3].y,2.5,0,Math.PI*2);
-    ctx.fillStyle='rgba(245,158,11,0.7)'; ctx.fill();
-  } catch(e){}
-
-  // Label
-  const score = Math.round(trust);
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  ctx.fillRect(box.x, box.y-22, 120, 18);
-  ctx.fillStyle = isAlert ? '#ef4444' : '#10b981';
-  ctx.font = 'bold 11px Space Mono';
-  ctx.fillText(`TRUST: ${score}%`, box.x+4, box.y-8);
-}
-
 /* ────────────────────────────────────────────────
    GAZE ANALYSIS from face landmarks
 
@@ -1410,6 +1350,66 @@ setGazeStatus('g', 'Looking at screen ✓');
 
   } catch (e) {}
 }*/
+function drawFaceOverlay(ctx, detection, canvas) {
+  const lm = detection.landmarks;
+  const box = detection.detection.box;
+  const W = canvas.width, H = canvas.height;
+
+  // Bounding box
+  const isAlert = gazeOffStreak > 10;
+  ctx.strokeStyle = isAlert ? 'rgba(239,68,68,0.75)' : 'rgba(16,185,129,0.6)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(box.x, box.y, box.width, box.height, 8);
+  ctx.stroke();
+
+  // Corner accents
+  const drawCorner = (x,y,dx,dy) => {
+    ctx.beginPath();
+    ctx.moveTo(x+dx*16,y); ctx.lineTo(x,y); ctx.lineTo(x,y+dy*16);
+    ctx.stroke();
+  };
+  ctx.lineWidth=2.5; ctx.strokeStyle=isAlert?'#ef4444':'#10b981';
+  drawCorner(box.x,box.y,1,1);
+  drawCorner(box.x+box.width,box.y,-1,1);
+  drawCorner(box.x,box.y+box.height,1,-1);
+  drawCorner(box.x+box.width,box.y+box.height,-1,-1);
+
+  // Eye landmarks
+  const drawPts = (pts,color) => {
+    ctx.beginPath();
+    pts.forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.closePath();
+    ctx.strokeStyle=color; ctx.lineWidth=1.2; ctx.globalAlpha=.8; ctx.stroke(); ctx.globalAlpha=1;
+  };
+
+  try {
+    const le = lm.getLeftEye();
+    const re = lm.getRightEye();
+    drawPts(le, '#00d4ff');
+    drawPts(re, '#00d4ff');
+
+    // Eye center dots
+    const eyeCenterX = (le.reduce((s,p)=>s+p.x,0)/le.length + re.reduce((s,p)=>s+p.x,0)/re.length)/2;
+    const eyeCenterY = (le.reduce((s,p)=>s+p.y,0)/le.length + re.reduce((s,p)=>s+p.y,0)/re.length)/2;
+    ctx.beginPath(); ctx.arc(eyeCenterX,eyeCenterY,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,212,255,0.9)'; ctx.fill();
+
+    // Nose
+    const nose = lm.getNose();
+    ctx.beginPath(); ctx.arc(nose[3].x,nose[3].y,2.5,0,Math.PI*2);
+    ctx.fillStyle='rgba(245,158,11,0.7)'; ctx.fill();
+  } catch(e){}
+
+  // Label
+  const score = Math.round(trust);
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(box.x, box.y-22, 120, 18);
+  ctx.fillStyle = isAlert ? '#ef4444' : '#10b981';
+  ctx.font = 'bold 11px Space Mono';
+  ctx.fillText(`TRUST: ${score}%`, box.x+4, box.y-8);
+}
+
 function analyzeGazeAdvanced(landmarks, canvas) {
   try {
     const nose     = landmarks.getNose();
