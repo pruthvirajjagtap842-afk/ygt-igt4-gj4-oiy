@@ -1,7 +1,7 @@
 {
   "name": "campro-server",
   "version": "1.0.0",
-  "description": "campro AI Interview Integrity Platform \u2014 Backend",
+  "description": "campro AI Interview Integrity Platform — Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,6 +11,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "agora-token": "2.0.5",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
