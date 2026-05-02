@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title> campro </title>
-<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script defer src="https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -930,97 +930,6 @@ if (role === 'candidate') {
   setInterval(runDetection, 200);
   startTabDetection();
   startSpeechRecognition();
-  <!-- Add this in the <script> section of index.html -->
-
-// ── GEMINI AI FUNCTIONS ──────────────────────────────────────
-function openGeminiModal() {
-  document.getElementById('geminiModal').classList.add('on');
-}
-
-function closeGeminiModal() {
-  document.getElementById('geminiModal').classList.remove('on');
-}
-
-async function generateQuestions() {
-  const role = document.getElementById('gemRoleInp').value || 'Software Engineer';
-  const level = document.getElementById('gemLevelSel').value || 'Mid';
-  const count = document.getElementById('gemCountSel').value || '5';
-  
-  const btn = document.getElementById('gemQBtn');
-  btn.disabled = true;
-  btn.textContent = '✨ Generating…';
-  
-  try {
-    const res = await fetch('/api/gemini/questions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role, level, count: parseInt(count) })
-    });
-    
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to generate questions');
-    
-    const output = document.getElementById('gemQOutput');
-    const list = document.getElementById('gemQList');
-    list.innerHTML = '';
-    
-    data.questions.forEach(q => {
-      const item = document.createElement('div');
-      item.className = 'gm-qitem';
-      item.innerHTML = `
-        <div class="gm-qtype">${q.type}</div>
-        <div class="gm-qtext">${q.question}</div>
-        <div class="gm-qwhy">💡 ${q.why}</div>
-      `;
-      list.appendChild(item);
-    });
-    
-    output.style.display = 'block';
-  } catch (err) {
-    alert('Error: ' + err.message);
-    console.error('[Gemini] Generate error:', err);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✨ Generate with Gemini';
-  }
-}
-
-async function generateGeminiAnalysis() {
-  if (!alerts || alerts.length === 0) {
-    console.warn('[Gemini] No alerts to analyze yet');
-    return;
-  }
-  
-  const analysisSection = document.getElementById('gemAnalysisSection');
-  const analysisWrap = document.getElementById('gemAnalysisWrap');
-  
-  analysisSection.style.display = 'block';
-  analysisWrap.textContent = '⏳ Analyzing integrity report…';
-  
-  try {
-    const res = await fetch('/api/gemini/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        trustScore: Math.round(trust),
-        alerts: alerts,
-        duration: formatTime(secs),
-        counts: counts,
-        verdict: getVerdict(),
-        candidateName: role === 'candidate' ? userName : '',
-        role: role === 'interviewer' ? '' : ''
-      })
-    });
-    
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Failed to analyze');
-    
-    analysisWrap.textContent = data.analysis;
-  } catch (err) {
-    analysisWrap.textContent = '❌ Analysis failed: ' + err.message;
-    console.error('[Gemini] Analyze error:', err);
-  }
-}
 };
   drawGazeCanvas();
   updateReport();
@@ -2072,9 +1981,19 @@ function setGazeStatus(c,t){document.getElementById('gsdot').className='sdot '+c
    TAB DETECTION
 ──────────────────────────────────────────────── */
 function startTabDetection() {
-   if (role !== 'candidate') return;
+  if (role !== 'candidate') return;
   document.addEventListener('visibilitychange', () => {
-    if(document.hidden) addAlert('tab','🖥️ Tab Switch','Candidate navigated away from the interview window.','medium');
+    if (document.hidden) {
+      counts.tab = (counts.tab || 0) + 1;
+      addAlert('tab', '🖥️ Tab Switch', 'Candidate navigated away from the interview window.', 'medium');
+    }
+  });
+  // Also detect window blur (alt+tab to another app)
+  window.addEventListener('blur', () => {
+    if (!strictModeActive) { // strict mode handles this separately
+      counts.tab = (counts.tab || 0) + 1;
+      addAlert('tab', '🖥️ Window Focus Lost', 'Candidate switched to another application.', 'medium');
+    }
   });
 }
 
@@ -2596,6 +2515,11 @@ async function generateQuestions() {
     out.style.display = 'block';
     showViolationToast('✨ Gemini generated ' + data.questions.length + ' questions!', 2500, '#4285f4');
   } catch(e) {
+    console.error('[Gemini] Error:', e);
+    const out2 = document.getElementById('gemQOutput');
+    const list2 = document.getElementById('gemQList');
+    if (list2) list2.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:12px;">❌ ${e.message}<br><small style="color:#888">Check that GEMINI_API_KEY is set in Railway variables.</small></div>`;
+    if (out2) out2.style.display = 'block';
     showViolationToast('❌ Gemini error: ' + e.message, 3000, '#ef4444');
   } finally {
     btn.textContent = '✨ Generate with Gemini';
