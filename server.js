@@ -245,7 +245,7 @@ function getGemini() {
   if (!process.env.GEMINI_API_KEY) return null;
   if (!geminiModel) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    geminiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   }
   return geminiModel;
 }
@@ -316,7 +316,7 @@ Keep it concise, professional, and objective. Plain text only, no markdown symbo
   try {
     const result = await model.generateContent(prompt);
     const analysis = result.response.text();
-    res.json({ analysis, model: 'gemini-1.5-flash', generatedAt: new Date().toISOString() });
+    res.json({ analysis, model: 'gemini-2.0-flash', generatedAt: new Date().toISOString() });
   } catch (err) {
     console.error('[Gemini] Analyze error:', err.message);
     res.status(500).json({ error: 'Failed to generate analysis' });
