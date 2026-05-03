@@ -1190,16 +1190,9 @@ async function startFaceDetection(video) {
       // ── MULTI FACE ──
       if (detections.length > 1) {
         multiFaceFrames++;
-        document.getElementById('mfitem').style.display = 'flex';
-        if (multiFaceFrames > 10 && Date.now() - lastMultiAlert > 8000) {
-          lastMultiAlert = Date.now();
-          addAlert('multi', '👥 Multiple Faces',
-            `${detections.length} faces detected continuously`, 'high');
-          flashBorder();
-        }
+        if (multiFaceFrames > 10) handleMultiFace(detections.length);
       } else {
         multiFaceFrames = 0;
-        multiFaceActive = false;
         document.getElementById('mfitem').style.display = 'none';
       }
 
@@ -1980,20 +1973,16 @@ function setGazeStatus(c,t){document.getElementById('gsdot').className='sdot '+c
 /* ────────────────────────────────────────────────
    TAB DETECTION
 ──────────────────────────────────────────────── */
+let _lastTabAlert = 0;
 function startTabDetection() {
   if (role !== 'candidate') return;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      counts.tab = (counts.tab || 0) + 1;
-      addAlert('tab', '🖥️ Tab Switch', 'Candidate navigated away from the interview window.', 'medium');
-    }
-  });
-  // Also detect window blur (alt+tab to another app)
-  window.addEventListener('blur', () => {
-    if (!strictModeActive) { // strict mode handles this separately
-      counts.tab = (counts.tab || 0) + 1;
-      addAlert('tab', '🖥️ Window Focus Lost', 'Candidate switched to another application.', 'medium');
-    }
+    if (!document.hidden) return;
+    const now = Date.now();
+    if (now - _lastTabAlert < 3000) return; // 3s cooldown — no duplicates
+    _lastTabAlert = now;
+    counts.tab = (counts.tab || 0) + 1;
+    addAlert('tab', '🖥️ Tab Switch', 'Candidate navigated away from the interview window.', 'medium');
   });
 }
 
@@ -2030,8 +2019,16 @@ function sim(type) {
 /* ────────────────────────────────────────────────
    ALERT ENGINE
 ──────────────────────────────────────────────── */
+// Global per-type cooldown to prevent duplicate alerts
+const _alertCooldowns = {};
+
 function addAlert(type, title, desc, sev) {
   if (role !== 'candidate') return;
+  // Deduplicate: same type+title can't fire twice within 2 seconds
+  const now = Date.now();
+  const key = type + '|' + (title || '');
+  if (_alertCooldowns[key] && now - _alertCooldowns[key] < 2000) return;
+  _alertCooldowns[key] = now;
   counts[type]++;
   const el = document.getElementById('dn-'+type);
   if(el) el.textContent = counts[type];
